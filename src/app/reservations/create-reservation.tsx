@@ -136,30 +136,6 @@ export default function CreateReservationForm() {
         </Select>
       </FormControl>
 
-      {/* Selector de Mesa (depende del restaurante) */}
-      <FormControl fullWidth disabled={!selectedRestaurantId} sx={{
-        '& .MuiInputBase-root': {
-          color: 'white',
-          '& fieldset': { borderColor: 'white' },
-          '&:hover fieldset': { borderColor: 'white' },
-          '&.Mui-focused fieldset': { borderColor: 'white' }
-        },
-        '& .MuiInputLabel-root': { color: 'white' }
-      }}>
-        <InputLabel>Mesa</InputLabel>
-        <Select
-          value={selectedTableId}
-          label="Mesa"
-          onChange={(e) => setSelectedTableId(e.target.value as string)}
-        >
-          {tables.map((table) => (
-            <MenuItem key={table.id} value={table.id}>
-              Mesa #{table.number} (Capacidad: {table.capacity})
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
       {/* Selector de fecha */}
       <TextField
         label="Fecha y Hora de la Reserva"
