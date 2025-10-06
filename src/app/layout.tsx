@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import EmotionCache from "./EmotionCache";
+import { AuthProvider } from "../context/AuthContext"; 
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="es">
       <body className={inter.className}>
         <EmotionCache>
-          {children}
+          <AuthProvider>   
+            {children}
+          </AuthProvider>
         </EmotionCache>
       </body>
     </html>
