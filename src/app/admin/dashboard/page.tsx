@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React from "react";
+import React, { useState } from "react";
 import { Box, Container, Typography, Divider } from "@mui/material";
 
 import UserFormSwitcher from "../../users/user-form-switcher";
@@ -9,6 +9,12 @@ import CreateRestaurantForm from "../../restaurants/create-restaurant";
 import RestaurantList from "../../restaurants/restaurant-list";
 
 export default function AdminDashboardPage() {
+  const [refreshRestaurants, setRefreshRestaurants] = useState(0);
+
+  const handleRestaurantCreated = () => {
+    setRefreshRestaurants(prev => prev + 1);
+  };
+
   return (
     <Container sx={{ py: 4 }}>
       <Box sx={{ mb: 6, textAlign: "center" }}>
@@ -24,9 +30,9 @@ export default function AdminDashboardPage() {
         <Typography variant="h4" component="h2" gutterBottom>
           Gestión de Restaurantes
         </Typography>
-        <CreateRestaurantForm />
+        <CreateRestaurantForm onCreated={handleRestaurantCreated} />
         <Divider sx={{ my: 3 }} />
-        <RestaurantList />
+        <RestaurantList refresh={refreshRestaurants} />
       </Box>
 
       <Box sx={{ mb: 6, p: 3, border: "1px solid #ccc", borderRadius: 2 }}>

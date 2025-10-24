@@ -11,7 +11,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Box,
 } from '@mui/material';
 
 interface User {
@@ -28,10 +27,20 @@ export default function UserList() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:4000/users');
+        // 🔹 Token JWT (copiado del login)
+        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImdvbnphQGdtYWlsLmNvbSIsInN1YiI6Ijg5ZmVjMDExLTZiZjktNGFmNy1hMmE0LTUwYWRlMTVkOTIzOCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2MTM0NTI4MSwiZXhwIjoxNzYxMzQ4ODgxfQ.8nfNrLuclyuYD1BscXZqBxDLvGlodhkJE1D7KXXtRoI";
+
+        // 🔹 Petición con header Authorization
+        const response = await fetch('http://localhost:4000/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
         if (!response.ok) {
           throw new Error('Error al cargar la lista de usuarios');
         }
+
         const data = await response.json();
         setUsers(data);
       } catch (err: any) {
