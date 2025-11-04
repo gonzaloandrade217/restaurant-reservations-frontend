@@ -28,7 +28,6 @@ export default function UserFormSwitcher() {
     setMessage("");
 
     if (isLogin) {
-      // Login
       try {
         const res = await fetch("http://localhost:4000/users/login", {
           method: "POST",
@@ -41,7 +40,10 @@ export default function UserFormSwitcher() {
         }
 
         const data = await res.json();
-        login(data.token, data.role as Role);
+
+        localStorage.setItem("authToken", data.access_token);
+
+        login(data.access_token, data.role as Role);
 
         setMessage("Login exitoso!");
         setEmail("");

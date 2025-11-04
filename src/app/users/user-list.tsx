@@ -18,8 +18,10 @@ interface User {
   name: string;
   email: string;
 }
-
-export default function UserList() {
+interface UserListProps {
+  refresh?: number;
+}
+export default function UserList({ refresh }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +29,9 @@ export default function UserList() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // 🔹 Token JWT (copiado del login)
-        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImdvbnphQGdtYWlsLmNvbSIsInN1YiI6Ijg5ZmVjMDExLTZiZjktNGFmNy1hMmE0LTUwYWRlMTVkOTIzOCIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc2MTM0NTI4MSwiZXhwIjoxNzYxMzQ4ODgxfQ.8nfNrLuclyuYD1BscXZqBxDLvGlodhkJE1D7KXXtRoI";
+        const token = localStorage.getItem("authToken");
+        if (!token) throw new Error("No se encontró token. Iniciá sesión como ADMIN.");
+
 
         // 🔹 Petición con header Authorization
         const response = await fetch('http://localhost:4000/users', {

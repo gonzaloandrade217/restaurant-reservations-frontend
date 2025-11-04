@@ -10,6 +10,7 @@ import RestaurantList from "../../restaurants/restaurant-list";
 
 export default function AdminDashboardPage() {
   const [refreshRestaurants, setRefreshRestaurants] = useState(0);
+  const [refreshUsers, setRefreshUsers] = useState(0);
 
   const handleRestaurantCreated = () => {
     setRefreshRestaurants(prev => prev + 1);
@@ -41,7 +42,7 @@ export default function AdminDashboardPage() {
         </Typography>
         <UserFormSwitcher />
         <Divider sx={{ my: 3 }} />
-        <UserList />
+        <UserList refresh={refreshRestaurants}/>
       </Box>
     </Container>
   );
