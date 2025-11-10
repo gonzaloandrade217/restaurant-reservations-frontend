@@ -3,5 +3,5 @@ export interface CreateReservationDto {
   partySize: number;
   userId: string;
   restaurantId: string;
-  tableId: string;
+  tableId?: string;
 }

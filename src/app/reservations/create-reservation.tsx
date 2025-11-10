@@ -33,7 +33,7 @@ export default function CreateReservationForm() {
   const [date, setDate] = useState('');
   const [message, setMessage] = useState('');
 
-  // 1. Obtener la lista de restaurantes al cargar el componente
+  // Obtener la lista de restaurantes
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
@@ -47,12 +47,12 @@ export default function CreateReservationForm() {
     fetchRestaurants();
   }, []);
 
-  // 2. Obtener la lista de mesas cuando se selecciona un restaurante
+  // Obtener la lista de mesas según el restaurante seleccionado
   useEffect(() => {
     if (selectedRestaurantId) {
       const fetchTables = async () => {
         try {
-          // Asume que tu backend tiene un endpoint para obtener mesas por restaurante
+          // Aquí usamos tu endpoint de mesas
           const response = await fetch(`http://localhost:4000/restaurants/${selectedRestaurantId}/tables`);
           const data = await response.json();
           setTables(data);
@@ -63,6 +63,7 @@ export default function CreateReservationForm() {
       fetchTables();
     } else {
       setTables([]);
+      setSelectedTableId('');
     }
   }, [selectedRestaurantId]);
 
@@ -70,8 +71,7 @@ export default function CreateReservationForm() {
     e.preventDefault();
     setMessage('Creando reserva...');
 
-    // Asume que el userId lo obtienes del login o es fijo para la prueba
-    const userId = 'aqui-va-el-id-del-usuario-logueado'; 
+    const userId = '89fec011-6bf9-4af7-a2a4-50ade15d9238'; // tu JWT userId
 
     const reservationData: CreateReservationDto = {
       date,
@@ -84,9 +84,7 @@ export default function CreateReservationForm() {
     try {
       const response = await fetch('http://localhost:4000/reservations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reservationData),
       });
 
@@ -111,17 +109,9 @@ export default function CreateReservationForm() {
       <Typography variant="h5" component="h2" gutterBottom align="center">
         Crear Nueva Reserva
       </Typography>
-      
+
       {/* Selector de Restaurante */}
-      <FormControl fullWidth sx={{
-        '& .MuiInputBase-root': {
-          color: 'white',
-          '& fieldset': { borderColor: 'white' },
-          '&:hover fieldset': { borderColor: 'white' },
-          '&.Mui-focused fieldset': { borderColor: 'white' }
-        },
-        '& .MuiInputLabel-root': { color: 'white' }
-      }}>
+      <FormControl fullWidth sx={{ '& .MuiInputBase-root': { color: 'white', '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } }, '& .MuiInputLabel-root': { color: 'white' } }}>
         <InputLabel>Restaurante</InputLabel>
         <Select
           value={selectedRestaurantId}
@@ -136,6 +126,24 @@ export default function CreateReservationForm() {
         </Select>
       </FormControl>
 
+      {/* Selector de Mesa */}
+      {tables.length > 0 && (
+        <FormControl fullWidth sx={{ mt: 2, '& .MuiInputBase-root': { color: 'white', '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } }, '& .MuiInputLabel-root': { color: 'white' } }}>
+          <InputLabel>Mesa</InputLabel>
+          <Select
+            value={selectedTableId}
+            label="Mesa"
+            onChange={(e) => setSelectedTableId(e.target.value as string)}
+          >
+            {tables.map((table) => (
+              <MenuItem key={table.id} value={table.id}>
+                Mesa {table.number} - Capacidad: {table.capacity}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
       {/* Selector de fecha */}
       <TextField
         label="Fecha y Hora de la Reserva"
@@ -145,18 +153,8 @@ export default function CreateReservationForm() {
         variant="outlined"
         fullWidth
         required
-        InputLabelProps={{
-          shrink: true,
-          style: { color: 'white' },
-        }}
-        sx={{
-          '& .MuiInputBase-input': { color: 'white' },
-          '& .MuiOutlinedInput-root': {
-            '& fieldset': { borderColor: 'white' },
-            '&:hover fieldset': { borderColor: 'white' },
-            '&.Mui-focused fieldset': { borderColor: 'white' },
-          },
-        }}
+        InputLabelProps={{ shrink: true, style: { color: 'white' } }}
+        sx={{ '& .MuiInputBase-input': { color: 'white' }, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } } }}
       />
 
       {/* Tamaño del grupo */}
@@ -168,17 +166,9 @@ export default function CreateReservationForm() {
         variant="outlined"
         fullWidth
         required
-        sx={{
-          '& .MuiInputBase-input': { color: 'white' },
-          '& .MuiInputLabel-root': { color: 'white' },
-          '& .MuiOutlinedInput-root': {
-            '& fieldset': { borderColor: 'white' },
-            '&:hover fieldset': { borderColor: 'white' },
-            '&.Mui-focused fieldset': { borderColor: 'white' },
-          },
-        }}
+        sx={{ '& .MuiInputBase-input': { color: 'white' }, '& .MuiInputLabel-root': { color: 'white' }, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } } }}
       />
-      
+
       <Button
         type="submit"
         variant="contained"
@@ -188,6 +178,7 @@ export default function CreateReservationForm() {
       >
         Crear Reserva
       </Button>
+
       {message && (
         <Typography color={message.includes('éxito') ? 'success.main' : 'error.main'} sx={{ mt: 2 }} align="center">
           {message}

@@ -27,6 +27,7 @@ export default function UserFormSwitcher() {
     e.preventDefault();
     setMessage("");
 
+    // LOGIN
     if (isLogin) {
       try {
         const res = await fetch("http://localhost:4000/users/login", {
@@ -35,22 +36,28 @@ export default function UserFormSwitcher() {
           body: JSON.stringify({ email, password }),
         });
 
-        if (!res.ok) {
-          throw new Error("Credenciales inválidas");
-        }
+        if (!res.ok) throw new Error("Credenciales inválidas");
 
         const data = await res.json();
 
+        // Guardar token
         localStorage.setItem("authToken", data.access_token);
 
-        login(data.access_token, data.role as Role);
+        // Guardar ID del usuario (ESTO ES CLAVE PARA RESERVAR)
+        localStorage.setItem("userId", data.user.id);
+
+        // Guardar rol del usuario
+        localStorage.setItem("userRole", data.user.role);
+
+        // Contesto al contexto si lo usás
+        login(data.access_token, data.user.role as Role);
 
         setMessage("Login exitoso!");
         setEmail("");
         setPassword("");
 
-        // Redirección según rol
-        if (data.role === "ADMIN") {
+        //  Redirección según rol
+        if (data.user.role === "ADMIN") {
           router.push("/admin/dashboard");
         } else {
           router.push("/users/dashboard");
@@ -58,38 +65,39 @@ export default function UserFormSwitcher() {
       } catch (err: any) {
         setMessage(err.message || "Error al iniciar sesión");
       }
-    } else {
-      // Crear usuario
-      const userData = {
-        name,
-        email,
-        password,
-        role: isAdmin ? "ADMIN" : "USER",
-      };
 
-      try {
-        const response = await fetch("http://localhost:4000/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userData),
-        });
+      return; 
+    }
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Error al crear el usuario");
-        }
+    //  REGISTRO
+    const userData = {
+      name,
+      email,
+      password,
+      role: isAdmin ? "ADMIN" : "USER",
+    };
 
-        const createdUser = await response.json();
-        setMessage(
-          `Usuario (${createdUser.role}) creado con éxito: ${createdUser.name}`
-        );
-        setName("");
-        setEmail("");
-        setPassword("");
-        setIsAdmin(false);
-      } catch (error: any) {
-        setMessage(`Error: ${error.message}`);
+    try {
+      const response = await fetch("http://localhost:4000/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error al crear el usuario");
       }
+
+      const createdUser = await response.json();
+
+      setMessage(`Usuario (${createdUser.role}) creado con éxito: ${createdUser.name}`);
+      setName("");
+      setEmail("");
+      setPassword("");
+      setIsAdmin(false);
+    } catch (error: any) {
+      setMessage(`Error: ${error.message}`);
     }
   };
 
@@ -179,11 +187,7 @@ export default function UserFormSwitcher() {
               sx={{ color: "white" }}
             />
           }
-          label={
-            <Typography sx={{ color: "white" }}>
-              ¿Registrarse como Administrador de Restaurante?
-            </Typography>
-          }
+          label={<Typography sx={{ color: "white" }}>¿Registrarse como Administrador?</Typography>}
         />
       )}
 
@@ -196,13 +200,7 @@ export default function UserFormSwitcher() {
         </Typography>
       )}
 
-      <Button
-        type="submit"
-        variant="contained"
-        color="primary"
-        fullWidth
-        onClick={handleSubmit}
-      >
+      <Button type="submit" variant="contained" color="primary" fullWidth onClick={handleSubmit}>
         {isLogin ? "Iniciar sesión" : "Registrar"}
       </Button>
 

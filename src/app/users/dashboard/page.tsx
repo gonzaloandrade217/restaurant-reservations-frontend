@@ -10,9 +10,10 @@ import {
   Button,
   Container,
 } from "@mui/material";
+import { useRouter } from "next/navigation";
 
 interface Restaurant {
-  id: number;
+  id: string; // asegúrate que sea string si usás UUID
   name: string;
   description: string;
   image?: string;
@@ -22,6 +23,8 @@ export default function UsersDashboardPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -74,6 +77,11 @@ export default function UsersDashboardPage() {
     );
   }
 
+  const handleReserveClick = (restaurantId: string) => {
+    // Redirige a la página de selección de cantidad de personas
+    router.push(`/reservations/select-seats?restaurant=${restaurantId}`);
+  };
+
   return (
     <Container sx={{ py: 4 }}>
       <Typography variant="h4" gutterBottom align="center">
@@ -104,7 +112,12 @@ export default function UsersDashboardPage() {
               <Typography variant="body2" color="text.secondary">
                 {restaurant.description}
               </Typography>
-              <Button variant="contained" sx={{ mt: 2 }} fullWidth>
+              <Button
+                variant="contained"
+                sx={{ mt: 2 }}
+                fullWidth
+                onClick={() => handleReserveClick(restaurant.id)}
+              >
                 Reservar mesa
               </Button>
             </CardContent>
