@@ -3,14 +3,19 @@
 import React, { useState } from "react";
 import { Box, Container, Typography, Divider } from "@mui/material";
 
-import UserFormSwitcher from "../../users/user-form-switcher";
 import UserList from "../../users/user-list";
 import CreateRestaurantForm from "../../restaurants/create-restaurant";
 import RestaurantList from "../../restaurants/restaurant-list";
+import AdminReservationsList from "../admin-reservations-list";
 
 export default function AdminDashboardPage() {
   const [refreshRestaurants, setRefreshRestaurants] = useState(0);
   const [refreshUsers, setRefreshUsers] = useState(0);
+  const [refreshReservations, setRefreshReservations] = useState(0);
+
+  const handleReservationUpdated = () => {
+    setRefreshReservations(prev => prev + 1);
+  };
 
   const handleRestaurantCreated = () => {
     setRefreshRestaurants(prev => prev + 1);
@@ -40,9 +45,13 @@ export default function AdminDashboardPage() {
         <Typography variant="h4" component="h2" gutterBottom>
           Gestión de Usuarios
         </Typography>
-        <UserFormSwitcher />
         <Divider sx={{ my: 3 }} />
-        <UserList refresh={refreshRestaurants}/>
+        <UserList refresh={refreshUsers}/>
+      </Box>
+      <Box sx={{ mb: 6, p: 3, border: "1px solid #ccc", borderRadius: 2 }}>
+        <Typography variant="h4" component="h2" gutterBottom>
+        </Typography>
+        <AdminReservationsList refresh={refreshReservations}/>
       </Box>
     </Container>
   );

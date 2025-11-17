@@ -2,69 +2,204 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Typography, TextField, Button } from '@mui/material';
-import { CreateReservationDto } from '../dto/create-reservation.dto';
+import {
+  Box,
+  Button,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+} from '@mui/material';
 
 export default function SelectSeatsPage() {
-  const [partySize, setPartySize] = useState(1);
-  const [message, setMessage] = useState('');
-  const [userId, setUserId] = useState<string>('');
-  const searchParams = useSearchParams();
-  const restaurantId = searchParams.get('restaurant');
+  const [partySize, setPartySize] = useState<number>(1);
+  const [dateTime, setDateTime] = useState<string>(''); 
+  const [message, setMessage] = useState<string>('');
   const router = useRouter();
 
-  // ✅ TOMAR USER ID DEL TOKEN
+  const searchParams = useSearchParams();
+  const restaurantIdFromQuery = searchParams?.get('restaurant') ?? null;
+
+  const [restaurantId, setRestaurantId] = useState<string | null>(restaurantIdFromQuery);
+  const [userId, setUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      setUserId(decoded.sub); // USER ID REAL
+    if (typeof window === 'undefined') return;
+    const u = localStorage.getItem('userId');
+    const rStored = localStorage.getItem('selectedRestaurantId');
+    if (u) setUserId(u);
+    if (!restaurantIdFromQuery && rStored) setRestaurantId(rStored);
+    if (restaurantIdFromQuery) localStorage.setItem('selectedRestaurantId', restaurantIdFromQuery);
+  }, [restaurantIdFromQuery]);
+
+  const toISOStringFromLocalInput = (localValue: string) => {
+    const d = new Date(localValue);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  };
+
+  const handleDateTimeChange = (value: string) => {
+    if (!value) {
+      setDateTime('');
+      return;
     }
-  }, []);
+    const d = new Date(value);
+    if (isNaN(d.getTime())) {
+      setDateTime(value);
+      return;
+    }
+    d.setMinutes(0, 0, 0); 
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const localStr = `${yyyy}-${mm}-${dd}T${hh}:00`;
+    setDateTime(localStr);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage('Creando reserva...');
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setMessage('');
 
-    const reservationData: CreateReservationDto = {
-      date: new Date().toISOString(),
-      partySize,
-      restaurantId: restaurantId!,
-      userId,
-    };
-
-    const response = await fetch("http://localhost:4000/reservations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(reservationData)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      setMessage("Error: " + errorData.message);
+    if (!userId) {
+      setMessage('Error: no estás identificado. Iniciá sesión.');
+      return;
+    }
+    if (!restaurantId) {
+      setMessage('Error: no se encontró el restaurante seleccionado.');
+      return;
+    }
+    if (!dateTime) {
+      setMessage('Por favor seleccioná fecha y hora.');
       return;
     }
 
-    setMessage("Reserva creada con éxito");
+    const iso = toISOStringFromLocalInput(dateTime);
+    if (!iso) {
+      setMessage('Fecha inválida.');
+      return;
+    }
+
+    const dto = {
+      restaurantId,
+      userId,
+      date: iso,
+      partySize,
+    };
+
+    try {
+      const res = await fetch('http://localhost:4000/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dto),
+      });
+
+      if (res.ok) {
+        setMessage(' Reserva enviada. El admin la revisará y la aceptará/rechazará.');
+        setTimeout(() => router.push('/users/my-reservations'), 1000);
+      } else {
+        const text = await res.text().catch(() => null);
+        let errMsg = text || `Error ${res.status}`;
+        try {
+          const j = JSON.parse(text || '{}');
+          if (j?.message) errMsg = j.message;
+        } catch {}
+        setMessage(` Error: ${errMsg}`);
+      }
+    } catch (err: any) {
+      setMessage(` Error de conexión: ${err.message || err}`);
+    }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Typography variant="h5">Seleccioná cantidad de personas</Typography>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        p: 4,
+        mt: 4,
+        maxWidth: 520,
+        mx: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+        color: 'white',
+        border: '2px solid white',
+        borderRadius: 3,
+        backgroundColor: 'rgba(12, 12, 12, 0.75)',
+      }}
+    >
+      <Typography variant="h5" textAlign="center">
+        Reservar en el restaurante
+      </Typography>
 
+      {/* Campo datetime-local nativo (compatibilidad garantizada). step=3600 para 1h */}
       <TextField
-        label="Número de personas"
-        type="number"
-        value={partySize}
-        onChange={(e) => setPartySize(parseInt(e.target.value))}
+        label="Fecha y hora"
+        type="datetime-local"
+        value={dateTime}
+        onChange={(e) => handleDateTimeChange(e.target.value)}
+        InputLabelProps={{ shrink: true }}
+        inputProps={{
+          step: 3600, // segundos => 3600 = 1 hora
+          style: { color: 'white' },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': { borderColor: 'white' },
+            '&:hover fieldset': { borderColor: '#00bfa5' },
+            '& input': { color: 'white' },
+            '& .MuiSvgIcon-root': { color: 'white' }, 
+          },
+          '& .MuiInputLabel-root': { color: 'white' },
+          '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+            filter: 'invert(1)', 
+          },
+        }}
         required
+        fullWidth
       />
 
-      <Button type="submit" variant="contained">
-        Confirmar reserva
+      <FormControl fullWidth>
+        <InputLabel sx={{ color: 'white' }}>Cantidad de personas</InputLabel>
+        <Select
+          value={partySize}
+          label="Cantidad de personas"
+          onChange={(e) => setPartySize(Number(e.target.value))}
+          sx={{
+            color: 'white',
+            '.MuiSvgIcon-root': { color: 'white' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#00bfa5' },
+          }}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+            <MenuItem key={n} value={n} sx={{ color: 'white', backgroundColor: '#000' }}>
+              {n}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Button
+        type="submit"
+        variant="contained"
+        sx={{
+          bgcolor: '#00bfa5',
+          '&:hover': { bgcolor: '#009e8e' },
+          fontWeight: 'bold',
+        }}
+      >
+        Confirmar Reserva
       </Button>
 
-      {message && <Typography>{message}</Typography>}
+      {message && (
+        <Typography textAlign="center" sx={{ mt: 1 }}>
+          {message}
+        </Typography>
+      )}
     </Box>
   );
 }
