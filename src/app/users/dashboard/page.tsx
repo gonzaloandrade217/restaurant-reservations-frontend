@@ -9,7 +9,16 @@ import {
   Typography,
   Button,
   Container,
+  Tabs,
+  Tab,
+  Paper,
+  Divider,
+  useMediaQuery
 } from "@mui/material";
+
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import BookOnlineIcon from "@mui/icons-material/BookOnline";
+
 import { useRouter } from "next/navigation";
 
 interface Restaurant {
@@ -20,6 +29,11 @@ interface Restaurant {
 }
 
 export default function UsersDashboardPage() {
+  const isMobile = useMediaQuery("(max-width: 600px)");
+  const router = useRouter();
+
+  const [section, setSection] = useState<"restaurantes" | "reservas" | null>(null);
+
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,26 +42,20 @@ export default function UsersDashboardPage() {
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
 
-  const router = useRouter();
-
-  // 🔹 Cargar restaurantes
+  // ------------------ Fetch restaurantes ------------------
   useEffect(() => {
+    if (section !== "restaurantes") return;
+
     const fetchRestaurants = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        if (!token) throw new Error("No se encontró el token. Iniciá sesión nuevamente.");
+        if (!token) throw new Error("No se encontró token.");
 
         const res = await fetch("http://localhost:4000/restaurants", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || "Error al obtener restaurantes");
-        }
+        if (!res.ok) throw new Error("Error al obtener restaurantes");
 
         setRestaurants(await res.json());
       } catch (err: any) {
@@ -58,31 +66,24 @@ export default function UsersDashboardPage() {
     };
 
     fetchRestaurants();
-  }, []);
+  }, [section]);
 
-  // 🔹 Cargar reservas del usuario
+  // ------------------ Fetch reservas ------------------
   useEffect(() => {
+    if (section !== "reservas") return;
+
     const fetchReservations = async () => {
       try {
         const token = localStorage.getItem("authToken");
         const userId = localStorage.getItem("userId");
-        if (!token || !userId)
-          throw new Error("Sesión inválida, volvé a iniciar sesión.");
+        if (!token || !userId) throw new Error("Sesión inválida.");
 
         const res = await fetch(
           `http://localhost:4000/reservations/user/${userId}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || "Error al obtener reservas");
-        }
+        if (!res.ok) throw new Error("Error al obtener reservas");
 
         setReservations(await res.json());
       } catch (err: any) {
@@ -93,122 +94,227 @@ export default function UsersDashboardPage() {
     };
 
     fetchReservations();
-  }, []);
+  }, [section]);
 
   const handleReserveClick = (restaurantId: string) => {
     router.push(`/reservations/select-seats?restaurant=${restaurantId}`);
   };
 
+  // ------------------ Formatear fecha ------------------
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // ------------------ Estado traducido ------------------
+  const translateStatus = (status: string) => {
+    if (status === "ACCEPTED") return "Aceptada";
+    if (status === "REJECTED") return "Rechazada";
+    return "Pendiente";
+  };
+
+  // ------------------ Color del estado ------------------
+  const statusColor = (status: string) => {
+    if (status === "ACCEPTED") return "green";
+    if (status === "REJECTED") return "red";
+    return "orange";
+  };
+
+  const tabValue =
+    section === "restaurantes"
+      ? 0
+      : section === "reservas"
+      ? 1
+      : false;
+
   return (
     <Container sx={{ py: 4 }}>
-      {/* RESTAURANTES */}
-      <Typography variant="h4" gutterBottom align="center">
-        Restaurantes disponibles
-      </Typography>
 
-      {loading ? (
-        <Typography align="center">Cargando restaurantes...</Typography>
-      ) : error ? (
-        <Typography align="center" color="error">{error}</Typography>
-      ) : (
-        <Box
-          display="grid"
-          gridTemplateColumns={{
-            xs: "repeat(1, 1fr)",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(3, 1fr)",
+      {/* NAVBAR */}
+      <Paper
+        elevation={3}
+        sx={{
+          mb: 4,
+          p: 2,
+          backgroundColor: "#FF8C42",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          borderRadius: 2,
+        }}
+      >
+        <Typography
+          sx={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: isMobile ? "1.4rem" : "1.8rem",
+            fontWeight: 700,
+            color: "white",
+            mb: isMobile ? 2 : 0,
           }}
-          gap={3}
         >
-          {restaurants.map((restaurant) => (
-            <Card key={restaurant.id} sx={{ boxShadow: 3 }}>
-              {restaurant.image && (
-                <CardMedia
-                  component="img"
-                  height="180"
-                  image={restaurant.image}
-                  alt={restaurant.name}
-                />
-              )}
-              <CardContent>
-                <Typography variant="h6">{restaurant.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {restaurant.description}
-                </Typography>
+          Menú del Usuario
+        </Typography>
 
-                <Button
-                  variant="contained"
-                  sx={{ mt: 2 }}
-                  fullWidth
-                  onClick={() => handleReserveClick(restaurant.id)}
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => {
+            if (newValue === 0) setSection("restaurantes");
+            if (newValue === 1) setSection("reservas");
+          }}
+          variant={isMobile ? "scrollable" : "standard"}
+          scrollButtons={false}
+          textColor="inherit"
+          TabIndicatorProps={{ style: { background: "white" } }}
+          sx={{
+            "& .MuiTab-root": {
+              minWidth: isMobile ? "100px" : "140px",
+              fontSize: ".85rem",
+              fontWeight: 600,
+              padding: "6px 10px",
+            }
+          }}
+        >
+          <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
+          <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+        </Tabs>
+      </Paper>
+
+      {/* ==================== RESTAURANTES ==================== */}
+      {section === "restaurantes" && (
+        <Box sx={{
+          backgroundColor: "black",
+          border: "1px solid white",
+          borderRadius: 2,
+          p: 3
+        }}>
+
+          <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
+            Restaurantes disponibles
+          </Typography>
+          <Divider sx={{ borderColor: "white", mb: 3 }} />
+
+          {loading ? (
+            <Typography sx={{ color: "white" }}>Cargando restaurantes...</Typography>
+          ) : error ? (
+            <Typography color="error">{error}</Typography>
+          ) : (
+            <Box
+              display="grid"
+              gridTemplateColumns={{
+                xs: "repeat(1, 1fr)",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+              }}
+              gap={3}
+            >
+              {restaurants.map((restaurant) => (
+                <Card
+                  key={restaurant.id}
+                  sx={{
+                    backgroundColor: "#111",
+                    color: "white",
+                    border: "1px solid white",
+                  }}
                 >
-                  Reservar mesa
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
-      )}
+                  {restaurant.image && (
+                    <CardMedia
+                      component="img"
+                      height="180"
+                      image={restaurant.image}
+                      alt={restaurant.name}
+                    />
+                  )}
+                  <CardContent>
+                    <Typography variant="h6">{restaurant.name}</Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      {restaurant.description}
+                    </Typography>
 
-      {restaurants.length === 0 && !loading && (
-        <Typography align="center" sx={{ mt: 3 }}>
-          No hay restaurantes disponibles por el momento.
-        </Typography>
-      )}
-
-      {/* SEPARADOR */}
-      <hr style={{ margin: "40px 0" }} />
-
-      {/* RESERVAS */}
-      <Typography variant="h4" gutterBottom align="center">
-        Mis reservas
-      </Typography>
-
-      {reservationsLoading && (
-        <Typography align="center">Cargando reservas...</Typography>
-      )}
-
-      {reservationsError && (
-        <Typography align="center" color="error">
-          {reservationsError}
-        </Typography>
-      )}
-
-      {!reservationsLoading && (
-        <Box display="flex" flexDirection="column" gap={2} mt={3}>
-          {reservations.map((reserva: any) => (
-            <Card key={reserva.id} sx={{ p: 2, boxShadow: 3 }}>
-              <Typography variant="h6">
-                Restaurante: {reserva.restaurant?.name}
-              </Typography>
-
-              <Typography>Fecha: {reserva.date}</Typography>
-              <Typography>Personas: {reserva.people}</Typography>
-
-              <Typography
-                sx={{
-                  mt: 1,
-                  fontWeight: "bold",
-                  color:
-                    reserva.status === "accepted"
-                      ? "green"
-                      : reserva.status === "rejected"
-                      ? "red"
-                      : "orange",
-                }}
-              >
-                Estado: {reserva.status.toUpperCase()}
-              </Typography>
-            </Card>
-          ))}
-
-          {reservations.length === 0 && !reservationsLoading && (
-            <Typography align="center" sx={{ mt: 3 }}>
-              No tenés reservas aún.
-            </Typography>
+                    <Button
+                      variant="contained"
+                      sx={{ mt: 2, backgroundColor: "#FF8C42" }}
+                      fullWidth
+                      onClick={() => handleReserveClick(restaurant.id)}
+                    >
+                      Reservar mesa
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
           )}
         </Box>
       )}
+
+      {/* ==================== RESERVAS ==================== */}
+      {section === "reservas" && (
+        <Box sx={{
+          backgroundColor: "black",
+          border: "1px solid white",
+          borderRadius: 2,
+          p: 3
+        }}>
+          <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
+            Mis reservas
+          </Typography>
+          <Divider sx={{ borderColor: "white", mb: 3 }} />
+
+          {reservationsLoading && (
+            <Typography sx={{ color: "white" }}>Cargando reservas...</Typography>
+          )}
+
+          {reservationsError && (
+            <Typography color="error">{reservationsError}</Typography>
+          )}
+
+          {!reservationsLoading && (
+            <Box display="flex" flexDirection="column" gap={2}>
+              {reservations.map((r: any) => (
+                <Card
+                  key={r.id}
+                  sx={{
+                    backgroundColor: "#111",
+                    color: "white",
+                    border: "1px solid white",
+                    p: 2
+                  }}
+                >
+                  <Typography variant="h6">
+                    Restaurante: {r.restaurant?.name}
+                  </Typography>
+
+                  <Typography>Fecha: {formatDate(r.date)}</Typography>
+                  <Typography>Personas: {r.people}</Typography>
+
+                  <Typography
+                    sx={{
+                      mt: 1,
+                      fontWeight: "bold",
+                      color: statusColor(r.status),
+                    }}
+                  >
+                    {translateStatus(r.status)}
+                  </Typography>
+                </Card>
+              ))}
+
+              {reservations.length === 0 && (
+                <Typography align="center" sx={{ color: "white", mt: 2 }}>
+                  No tenés reservas aún.
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Box>
+      )}
+
     </Container>
   );
 }
