@@ -10,8 +10,13 @@ import {
   Tab,
   Paper,
   Button,
-  useMediaQuery
+  useMediaQuery,
+  IconButton,
+  Menu,
+  MenuItem
 } from "@mui/material";
+
+import MenuIcon from "@mui/icons-material/Menu";
 
 import PeopleIcon from "@mui/icons-material/People";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
@@ -43,37 +48,64 @@ export default function AdminDashboardPage() {
     section === "reservas" ? 2 :
     false;
 
+  // ------------------------ MENÚ HAMBURGUESA ------------------------
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(menuAnchor);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  };
+
+  const handleDeleteAccount = () => {
+    if (confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) {
+      alert("Acá iría la lógica para eliminar al usuario");
+    }
+  };
+
   return (
     <Container sx={{ py: 4 }}>
 
-      {/* ---------------------- NAVBAR ---------------------- */}
+      {/* ---------------------- NAVBAR (UNA SOLA LÍNEA) ---------------------- */}
       <Paper
         elevation={3}
         sx={{
           mb: 4,
-          p: 2,
+          px: 2,
+          py: 1.5,
           backgroundColor: "#FF8C42",
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          flexWrap: "wrap",
-          borderRadius: 2
+          gap: 2,
+          borderRadius: 2,
+          overflowX: "auto",
         }}
       >
-        {/* TÍTULO ADMINISTRACIÓN */}
+
+        {/* IZQUIERDA → TÍTULO */}
         <Typography
           sx={{
             fontFamily: "'Playfair Display', serif",
-            fontSize: isMobile ? "1.4rem" : "1.8rem",
+            fontSize: "1.4rem",
             fontWeight: 700,
             color: "#fff",
-            mb: isMobile ? 2 : 0
+            whiteSpace: "nowrap",
           }}
         >
           Administración
         </Typography>
 
-        {/* TABS */}
+        {/* CENTRO → TABS */}
         <Tabs
           value={tabValue}
           onChange={(e, newValue) => {
@@ -81,24 +113,59 @@ export default function AdminDashboardPage() {
             if (newValue === 1) setSection("restaurantes");
             if (newValue === 2) setSection("reservas");
           }}
-          variant={isMobile ? "scrollable" : "standard"}
+          variant="scrollable"
           scrollButtons={false}
           textColor="inherit"
           TabIndicatorProps={{ style: { background: "white" } }}
           sx={{
-            minHeight: "40px",
+            flex: 1,
             "& .MuiTab-root": {
-              minWidth: isMobile ? "90px" : "120px",
+              minWidth: "120px",
               padding: "6px 10px",
               fontSize: "0.8rem",
               fontWeight: 600,
-            }
+              whiteSpace: "nowrap"
+            },
           }}
         >
           <Tab icon={<PeopleIcon />} label="Usuarios" />
           <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
           <Tab icon={<BookOnlineIcon />} label="Reservas" />
         </Tabs>
+
+        {/* DERECHA → MENÚ HAMBURGUESA */}
+        <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
+          <MenuIcon />
+        </IconButton>
+
+        <Menu
+          anchorEl={menuAnchor}
+          open={openMenu}
+          onClose={handleMenuClose}
+          PaperProps={{
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              handleMenuClose();
+              handleLogout();
+            }}
+            sx={{ "&:hover": { bgcolor: "#222" } }}
+          >
+            Cerrar sesión
+          </MenuItem>
+
+          <MenuItem
+            onClick={() => {
+              handleMenuClose();
+              handleDeleteAccount();
+            }}
+            sx={{ color: "red", "&:hover": { bgcolor: "#300" } }}
+          >
+            Eliminar cuenta
+          </MenuItem>
+        </Menu>
+
       </Paper>
 
       {/* ---------------------- SECCIÓN USUARIOS ---------------------- */}
@@ -131,7 +198,6 @@ export default function AdminDashboardPage() {
             Gestión de Restaurantes
           </Typography>
 
-          {/* BOTÓN PARA MOSTRAR/OCULTAR FORMULARIO */}
           <Button
             variant="contained"
             sx={{
@@ -145,7 +211,6 @@ export default function AdminDashboardPage() {
             {showCreateForm ? "Cerrar formulario" : "Crear restaurante"}
           </Button>
 
-          {/* FORMULARIO MOSTRADO SOLO SI SE ABRE */}
           {showCreateForm && (
             <Box sx={{ mb: 3 }}>
               <CreateRestaurantForm onCreated={handleRestaurantCreated} />
@@ -153,7 +218,6 @@ export default function AdminDashboardPage() {
           )}
 
           <Divider sx={{ my: 3, borderColor: "white" }} />
-
           <RestaurantList refresh={refreshRestaurants} />
         </Box>
       )}

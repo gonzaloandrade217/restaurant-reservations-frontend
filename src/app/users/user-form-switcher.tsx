@@ -1,33 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth, Role } from "../../context/AuthContext";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Checkbox,
-  FormControlLabel,
-} from "@mui/material";
+import { useAuth, Role } from "../../context/AuthContext";
+import { Box, TextField, Button, Typography, Checkbox, FormControlLabel } from "@mui/material";
+
+declare global {
+  interface Window {
+    google: any;
+  }
+}
 
 export default function UserFormSwitcher() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const [isLogin, setIsLogin] = useState(false); 
+  const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState("");
 
+  // ----------------------------
+  // Manejo de login + token
+  // ----------------------------
+  const handleLogin = (access_token: string, userRole: Role, userId: string) => {
+    localStorage.setItem("authToken", access_token);
+    localStorage.setItem("userRole", userRole);
+    localStorage.setItem("userId", userId);
+
+    login(access_token, userRole);
+
+    if (userRole === "ADMIN") router.push("/admin/dashboard");
+    else router.push("/users/dashboard");
+  };
+
+  // ----------------------------
+  // LOGIN / REGISTRO NORMAL
+  // ----------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
 
-    // LOGIN
     if (isLogin) {
       try {
         const res = await fetch("http://localhost:4000/users/login", {
@@ -39,37 +54,17 @@ export default function UserFormSwitcher() {
         if (!res.ok) throw new Error("Credenciales inválidas");
 
         const data = await res.json();
-
-        // Guardar token
-        localStorage.setItem("authToken", data.access_token);
-
-        // Guardar ID del usuario (ESTO ES CLAVE PARA RESERVAR)
-        localStorage.setItem("userId", data.user.id);
-
-        // Guardar rol del usuario
-        localStorage.setItem("userRole", data.user.role);
-
-        // Contesto al contexto si lo usás
-        login(data.access_token, data.user.role as Role);
-
+        handleLogin(data.access_token, data.user.role as Role, data.user.id);
         setMessage("Login exitoso!");
         setEmail("");
         setPassword("");
-
-        //  Redirección según rol
-        if (data.user.role === "ADMIN") {
-          router.push("/admin/dashboard");
-        } else {
-          router.push("/users/dashboard");
-        }
       } catch (err: any) {
         setMessage(err.message || "Error al iniciar sesión");
       }
-
-      return; 
+      return;
     }
 
-    //  REGISTRO
+    // REGISTRO NORMAL
     const userData = {
       name,
       email,
@@ -86,20 +81,69 @@ export default function UserFormSwitcher() {
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        if (errorData.message?.includes("email") || errorData.message?.includes("Email")) {
+          throw new Error("El correo ya está registrado. Probá iniciando sesión.");
+        }
+
         throw new Error(errorData.message || "Error al crear el usuario");
       }
 
       const createdUser = await response.json();
-
-      setMessage(`Usuario (${createdUser.role}) creado con éxito: ${createdUser.name}`);
-      setName("");
-      setEmail("");
-      setPassword("");
-      setIsAdmin(false);
+      handleLogin(createdUser.access_token, createdUser.role as Role, createdUser.id);
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
     }
   };
+
+  // ----------------------------
+  // LOGIN CON GOOGLE
+  // ----------------------------
+  const handleCredentialResponse = async (response: any) => {
+    const idToken = response.credential;
+
+    try {
+      const res = await fetch("http://localhost:4000/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, role: isAdmin ? "ADMIN" : "USER" }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+
+        if (errorData.message?.includes("email")) {
+          setMessage("El correo ya está registrado. Iniciá sesión en vez de registrarte.");
+          return;
+        }
+        
+          throw new Error("Error en el login con Google");
+        }
+
+
+      const data = await res.json();
+      handleLogin(data.access_token, data.user.role as Role, data.user.id);
+    } catch (error: any) {
+      console.error("Error al enviar token al backend:", error.message);
+    }
+  };
+
+  // ----------------------------
+  // Montaje del botón de Google
+  // ----------------------------
+  useEffect(() => {
+    if (!window.google) return;
+
+    window.google.accounts.id.initialize({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+    });
+
+    window.google.accounts.id.renderButton(
+      document.getElementById("googleSignInDiv")!,
+      { theme: "outline", size: "large" }
+    );
+  }, [isAdmin]);
 
   return (
     <Box
@@ -214,6 +258,9 @@ export default function UserFormSwitcher() {
       >
         {isLogin ? "¿No tienes cuenta? Registrarse" : "¿Ya tienes cuenta? Iniciar sesión"}
       </Button>
+
+      {/* Botón de Google */}
+      <div id="googleSignInDiv" style={{ marginTop: 20, display: "flex", justifyContent: "center" }}></div>
     </Box>
   );
 }

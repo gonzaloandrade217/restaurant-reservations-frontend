@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -13,9 +13,13 @@ import {
   Tab,
   Paper,
   Divider,
-  useMediaQuery
+  useMediaQuery,
+  IconButton,
+  Menu,
+  MenuItem
 } from "@mui/material";
 
+import MenuIcon from "@mui/icons-material/Menu";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 
@@ -32,6 +36,21 @@ export default function UsersDashboardPage() {
   const isMobile = useMediaQuery("(max-width: 600px)");
   const router = useRouter();
 
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuOpen = (event: any) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const logout = () => {
+    localStorage.clear();
+    router.push("/auth/login");
+  };
+
+  const deleteAccount = () => {
+    alert("Función eliminar cuenta (agregar lógica si querés).");
+  };
+
   const [section, setSection] = useState<"restaurantes" | "reservas" | null>(null);
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -42,7 +61,7 @@ export default function UsersDashboardPage() {
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
 
-  // ------------------ Fetch restaurantes ------------------
+  /* ------------------ Fetch restaurantes ------------------ */
   useEffect(() => {
     if (section !== "restaurantes") return;
 
@@ -68,7 +87,7 @@ export default function UsersDashboardPage() {
     fetchRestaurants();
   }, [section]);
 
-  // ------------------ Fetch reservas ------------------
+  /* ------------------ Fetch reservas ------------------ */
   useEffect(() => {
     if (section !== "reservas") return;
 
@@ -100,7 +119,7 @@ export default function UsersDashboardPage() {
     router.push(`/reservations/select-seats?restaurant=${restaurantId}`);
   };
 
-  // ------------------ Formatear fecha ------------------
+  /* ------------------ Format helpers ------------------ */
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleString("es-AR", {
@@ -112,14 +131,12 @@ export default function UsersDashboardPage() {
     });
   };
 
-  // ------------------ Estado traducido ------------------
   const translateStatus = (status: string) => {
     if (status === "ACCEPTED") return "Aceptada";
     if (status === "REJECTED") return "Rechazada";
     return "Pendiente";
   };
 
-  // ------------------ Color del estado ------------------
   const statusColor = (status: string) => {
     if (status === "ACCEPTED") return "green";
     if (status === "REJECTED") return "red";
@@ -146,35 +163,38 @@ export default function UsersDashboardPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           borderRadius: 2,
+          gap: 2
         }}
       >
+        {/* TÍTULO */}
         <Typography
           sx={{
             fontFamily: "'Playfair Display', serif",
-            fontSize: isMobile ? "1.4rem" : "1.8rem",
+            fontSize: isMobile ? "1.3rem" : "1.8rem",
             fontWeight: 700,
             color: "white",
-            mb: isMobile ? 2 : 0,
+            whiteSpace: "nowrap"
           }}
         >
           Menú del Usuario
         </Typography>
 
+        {/* TABS */}
         <Tabs
           value={tabValue}
           onChange={(e, newValue) => {
             if (newValue === 0) setSection("restaurantes");
             if (newValue === 1) setSection("reservas");
           }}
-          variant={isMobile ? "scrollable" : "standard"}
           scrollButtons={false}
           textColor="inherit"
           TabIndicatorProps={{ style: { background: "white" } }}
           sx={{
+            flexGrow: 1,
             "& .MuiTab-root": {
-              minWidth: isMobile ? "100px" : "140px",
+              minWidth: isMobile ? "90px" : "130px",
               fontSize: ".85rem",
               fontWeight: 600,
               padding: "6px 10px",
@@ -184,6 +204,18 @@ export default function UsersDashboardPage() {
           <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
           <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
         </Tabs>
+
+        {/* MENÚ HAMBURGUESA A LA DERECHA */}
+        <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
+          <MenuIcon />
+        </IconButton>
+
+        <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
+          <MenuItem onClick={logout}>Cerrar sesión</MenuItem>
+          <MenuItem onClick={deleteAccount} sx={{ color: "red" }}>
+            Eliminar cuenta
+          </MenuItem>
+        </Menu>
       </Paper>
 
       {/* ==================== RESTAURANTES ==================== */}
