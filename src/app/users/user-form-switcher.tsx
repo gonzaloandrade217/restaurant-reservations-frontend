@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, Role } from "../../context/AuthContext";
-import { Box, TextField, Button, Typography, Checkbox, FormControlLabel } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { auth, googleProvider } from "../../firebase";  
+import { signInWithPopup } from "firebase/auth";
 
 export default function UserFormSwitcher() {
   const { login } = useAuth();
@@ -82,11 +86,11 @@ export default function UserFormSwitcher() {
       if (!response.ok) {
         const errorData = await response.json();
 
-        if (errorData.message?.includes("email") || errorData.message?.includes("Email")) {
-          throw new Error("El correo ya está registrado. Probá iniciando sesión.");
+        if (errorData.message?.includes("email")) {
+          throw new Error("El correo ya está registrado. Iniciá sesión.");
         }
 
-        throw new Error(errorData.message || "Error al crear el usuario");
+        throw new Error(errorData.message || "Error al crear usuario");
       }
 
       const createdUser = await response.json();
@@ -97,53 +101,40 @@ export default function UserFormSwitcher() {
   };
 
   // ----------------------------
-  // LOGIN CON GOOGLE
+  // LOGIN CON GOOGLE - FIREBASE
   // ----------------------------
-  const handleCredentialResponse = async (response: any) => {
-    const idToken = response.credential;
-
+  const handleGoogleSignIn = async () => {
     try {
+      const result = await signInWithPopup(auth, googleProvider);
+
+      const user = result.user;
+
+      // Obtenemos idToken REAL de Firebase
+      const idToken = await user.getIdToken(true);
+      console.log("🔥 ID TOKEN DE FIREBASE:", idToken);
+
+      // Mandamos token al backend Nest
       const res = await fetch("http://localhost:4000/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, role: isAdmin ? "ADMIN" : "USER" }),
+        body: JSON.stringify({
+          idToken,
+          role: isAdmin ? "ADMIN" : "USER",
+        }),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-
-        if (errorData.message?.includes("email")) {
-          setMessage("El correo ya está registrado. Iniciá sesión en vez de registrarte.");
-          return;
-        }
-        
-          throw new Error("Error en el login con Google");
-        }
-
+        throw new Error(errorData.message || "Error en el login con Google");
+      }
 
       const data = await res.json();
       handleLogin(data.access_token, data.user.role as Role, data.user.id);
-    } catch (error: any) {
-      console.error("Error al enviar token al backend:", error.message);
+    } catch (err: any) {
+      console.error("Google SignIn error:", err);
+      setMessage(err.message || "Error en login con Google");
     }
   };
-
-  // ----------------------------
-  // Montaje del botón de Google
-  // ----------------------------
-  useEffect(() => {
-    if (!window.google) return;
-
-    window.google.accounts.id.initialize({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-    });
-
-    window.google.accounts.id.renderButton(
-      document.getElementById("googleSignInDiv")!,
-      { theme: "outline", size: "large" }
-    );
-  }, [isAdmin]);
 
   return (
     <Box
@@ -159,67 +150,36 @@ export default function UserFormSwitcher() {
         gap: 3,
       }}
     >
-      <Typography variant="h5" component="h2" gutterBottom align="center">
-        {isLogin ? "Iniciar Sesión" : "Crear Nuevo Usuario"}
+      <Typography variant="h5" align="center">
+        {isLogin ? "Iniciar Sesión" : "Crear Usuario"}
       </Typography>
 
       {!isLogin && (
         <TextField
           label="Nombre"
-          type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          variant="outlined"
           fullWidth
           required
-          sx={{
-            "& .MuiInputBase-input": { color: "white" },
-            "& .MuiInputLabel-root": { color: "white" },
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": { borderColor: "white" },
-              "&:hover fieldset": { borderColor: "white" },
-              "&.Mui-focused fieldset": { borderColor: "white" },
-            },
-          }}
         />
       )}
 
       <TextField
         label="Email"
-        type="email"
         value={email}
+        type="email"
         onChange={(e) => setEmail(e.target.value)}
-        variant="outlined"
         fullWidth
         required
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
       />
 
       <TextField
         label="Contraseña"
-        type="password"
         value={password}
+        type="password"
         onChange={(e) => setPassword(e.target.value)}
-        variant="outlined"
         fullWidth
         required
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
       />
 
       {!isLogin && (
@@ -228,39 +188,41 @@ export default function UserFormSwitcher() {
             <Checkbox
               checked={isAdmin}
               onChange={(e) => setIsAdmin(e.target.checked)}
-              sx={{ color: "white" }}
             />
           }
-          label={<Typography sx={{ color: "white" }}>¿Registrarse como Administrador?</Typography>}
+          label="¿Registrarse como Admin?"
         />
       )}
 
       {message && (
-        <Typography
-          color={message.includes("éxito") || message.includes("Login") ? "success.main" : "error.main"}
-          align="center"
-        >
+        <Typography color="error" align="center">
           {message}
         </Typography>
       )}
 
-      <Button type="submit" variant="contained" color="primary" fullWidth onClick={handleSubmit}>
+      <Button variant="contained" fullWidth onClick={handleSubmit}>
         {isLogin ? "Iniciar sesión" : "Registrar"}
       </Button>
 
       <Button
         variant="text"
-        sx={{ mt: 1, color: "white" }}
+        fullWidth
         onClick={() => {
           setIsLogin(!isLogin);
           setMessage("");
         }}
       >
-        {isLogin ? "¿No tienes cuenta? Registrarse" : "¿Ya tienes cuenta? Iniciar sesión"}
+        {isLogin ? "¿No tenés cuenta? Registrarse" : "¿Ya tenés cuenta? Iniciar sesión"}
       </Button>
 
-      {/* Botón de Google */}
-      <div id="googleSignInDiv" style={{ marginTop: 20, display: "flex", justifyContent: "center" }}></div>
+      <Button
+        variant="contained"
+        fullWidth
+        onClick={handleGoogleSignIn}
+        sx={{ backgroundColor: "#DB4437" }}
+      >
+        Ingresar con Google
+      </Button>
     </Box>
   );
 }
