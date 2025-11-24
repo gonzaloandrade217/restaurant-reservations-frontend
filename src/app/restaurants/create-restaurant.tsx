@@ -13,6 +13,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [capacity, setCapacity] = useState<number | "">("");
+  const [cantidadMesas, setCantidadMesas] = useState<number | "">("");
   const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +22,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
 
     try {
       const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("No se encontró el token. Iniciá sesión nuevamente.");
+      if (!token) throw new Error("No se encontró el token.");
 
       const response = await fetch("http://localhost:4000/restaurants", {
         method: "POST",
@@ -34,7 +35,8 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           address,
           phone,
           description,
-          capacity: capacity === "" ? null : Number(capacity),
+          capacity: Number(capacity),
+          cantidadMesas: Number(cantidadMesas),
         }),
       });
 
@@ -44,16 +46,18 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       }
 
       const restaurantData = await response.json();
-      setMessage(`✅ Restaurante creado con éxito: ${restaurantData.name}`);
+      setMessage(`Restaurante creado con éxito: ${restaurantData.name}`);
+
       setName("");
       setAddress("");
       setPhone("");
       setDescription("");
       setCapacity("");
+      setCantidadMesas("");
 
       if (onCreated) onCreated();
     } catch (error: any) {
-      setMessage(`❌ Error: ${error.message}`);
+      setMessage(`Error: ${error.message}`);
     }
   };
 
@@ -62,108 +66,94 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       component="form"
       onSubmit={handleSubmit}
       sx={{
-        p: 4,
-        maxWidth: 400,
+        p: { xs: 2, sm: 3, md: 4 },
+        width: "100%",
+        maxWidth: 450,
         mx: "auto",
-        border: "1px solid #ffffff",
+        mt: { xs: 2, sm: 4 },
+        border: "1px solid white",
         borderRadius: 2,
         boxShadow: 3,
         display: "flex",
         flexDirection: "column",
-        gap: 3,
+        gap: { xs: 2, sm: 2.5, md: 3 },
       }}
     >
       <Typography
         variant="h5"
-        component="h2"
-        gutterBottom
         align="center"
-        sx={{ color: "white" }}
+        sx={{
+          color: "white",
+          fontSize: { xs: "1.4rem", sm: "1.6rem", md: "1.8rem" },
+        }}
       >
         Crear Nuevo Restaurante
       </Typography>
 
-      <TextField
-        label="Nombre"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        fullWidth
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
-      />
+      {/* Inputs */}
+      {[
+        {
+          label: "Nombre",
+          value: name,
+          onChange: (e: any) => setName(e.target.value),
+        },
+        {
+          label: "Dirección",
+          value: address,
+          onChange: (e: any) => setAddress(e.target.value),
+        },
+        {
+          label: "Teléfono",
+          value: phone,
+          onChange: (e: any) => setPhone(e.target.value),
+        },
+        {
+          label: "Capacidad Total",
+          value: capacity,
+          type: "number",
+          onChange: (e: any) =>
+            setCapacity(e.target.value === "" ? "" : Number(e.target.value)),
+        },
+        {
+          label: "Cantidad de Mesas",
+          value: cantidadMesas,
+          type: "number",
+          onChange: (e: any) =>
+            setCantidadMesas(e.target.value === "" ? "" : Number(e.target.value)),
+        },
+      ].map((field, index) => (
+        <TextField
+          key={index}
+          {...field}
+          required
+          fullWidth
+          InputLabelProps={{
+            style: { color: "white" },
+          }}
+          inputProps={{
+            style: { color: "white" },
+          }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "white" },
+              "&:hover fieldset": { borderColor: "white" },
+              "&.Mui-focused fieldset": { borderColor: "white" },
+            },
+          }}
+        />
+      ))}
 
-      <TextField
-        label="Dirección"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        required
-        fullWidth
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
-      />
-
-      <TextField
-        label="Teléfono"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        required
-        fullWidth
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
-      />
-
-      <TextField
-        label="Capacidad"
-        type="number"
-        value={capacity}
-        onChange={(e) =>
-          setCapacity(e.target.value === "" ? "" : Number(e.target.value))
-        }
-        required
-        fullWidth
-        sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
-          },
-        }}
-      />
-
+      {/* Descripción */}
       <TextField
         label="Descripción (opcional)"
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        fullWidth
         multiline
         rows={3}
+        onChange={(e) => setDescription(e.target.value)}
+        fullWidth
+        InputLabelProps={{ style: { color: "white" } }}
+        inputProps={{ style: { color: "white" } }}
         sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
           "& .MuiOutlinedInput-root": {
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
@@ -172,20 +162,31 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         }}
       />
 
+      {/* Botón naranja responsive */}
       <Button
         type="submit"
-        variant="contained"
-        color="primary"
         fullWidth
+        sx={{
+          backgroundColor: "#FF7B00",
+          color: "white",
+          py: { xs: 1.2, sm: 1.4 },
+          fontSize: { xs: "0.95rem", sm: "1rem" },
+          borderRadius: 2,
+          "&:hover": {
+            backgroundColor: "#e86f00",
+          },
+        }}
       >
         Registrar
       </Button>
 
+      {/* Mensaje */}
       {message && (
         <Typography
           align="center"
           sx={{
-            color: message.includes("éxito") ? "success.main" : "error.main",
+            color: "white",
+            fontSize: { xs: "0.9rem", sm: "1rem" },
           }}
         >
           {message}

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from "react";
 import {
@@ -44,14 +44,35 @@ export default function UsersDashboardPage() {
 
   const logout = () => {
     localStorage.clear();
-    router.push("/auth/login");
+    router.push("/");
   };
 
-  const deleteAccount = () => {
-    alert("Función eliminar cuenta (agregar lógica si querés).");
-  };
+  const deleteAccount = async () => {
+  if (!confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) return;
 
-  const [section, setSection] = useState<"restaurantes" | "reservas" | null>(null);
+    try {
+      const token = localStorage.getItem("authToken");
+      const userId = localStorage.getItem("userId");
+      if (!token || !userId) throw new Error("No estás autenticado.");
+
+
+      const res = await fetch(`http://localhost:4000/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Error al eliminar usuario");
+
+      alert("Usuario eliminado correctamente.");
+      localStorage.clear();
+      window.location.href = "/";
+
+      } catch (err: any) {
+        alert(err.message);
+      }
+    };
+
+  const [section, setSection] = useState<"restaurantes" | "reservas" >("restaurantes");
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,7 +173,6 @@ export default function UsersDashboardPage() {
 
   return (
     <Container sx={{ py: 4 }}>
-
       {/* NAVBAR */}
       <Paper
         elevation={3}
@@ -163,7 +183,7 @@ export default function UsersDashboardPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          flexWrap: "nowrap",
+          flexWrap: "wrap",
           borderRadius: 2,
           gap: 2
         }}
@@ -178,32 +198,33 @@ export default function UsersDashboardPage() {
             whiteSpace: "nowrap"
           }}
         >
-          Menú del Usuario
+          MesaSegura
         </Typography>
 
         {/* TABS */}
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => {
-            if (newValue === 0) setSection("restaurantes");
-            if (newValue === 1) setSection("reservas");
-          }}
-          scrollButtons={false}
-          textColor="inherit"
-          TabIndicatorProps={{ style: { background: "white" } }}
-          sx={{
-            flexGrow: 1,
-            "& .MuiTab-root": {
-              minWidth: isMobile ? "90px" : "130px",
-              fontSize: ".85rem",
-              fontWeight: 600,
-              padding: "6px 10px",
-            }
-          }}
-        >
-          <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-          <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
-        </Tabs>
+        {!isMobile ? (
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => {
+              if (newValue === 0) setSection("restaurantes");
+              if (newValue === 1) setSection("reservas");
+            }}
+            textColor="inherit"
+            TabIndicatorProps={{ style: { background: "white" } }}
+            sx={{
+              flexGrow: 1,
+              "& .MuiTab-root": {
+                minWidth: "130px",
+                fontSize: ".85rem",
+                fontWeight: 600,
+                padding: "6px 10px",
+              }
+            }}
+          >
+            <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
+            <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+          </Tabs>
+        ) : null}
 
         {/* MENÚ HAMBURGUESA A LA DERECHA */}
         <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
@@ -211,6 +232,11 @@ export default function UsersDashboardPage() {
         </IconButton>
 
         <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
+          {isMobile && [
+            <MenuItem key="restaurantes" onClick={() => { setSection("restaurantes"); handleMenuClose(); }}>Restaurantes</MenuItem>,
+            <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>Mis Reservas</MenuItem>,
+            <Divider key="divider" sx={{ my: 1 }} />
+          ]}
           <MenuItem onClick={logout}>Cerrar sesión</MenuItem>
           <MenuItem onClick={deleteAccount} sx={{ color: "red" }}>
             Eliminar cuenta
@@ -226,7 +252,6 @@ export default function UsersDashboardPage() {
           borderRadius: 2,
           p: 3
         }}>
-
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
             Restaurantes disponibles
           </Typography>
@@ -307,7 +332,7 @@ export default function UsersDashboardPage() {
           )}
 
           {!reservationsLoading && (
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="grid" gap={2} gridTemplateColumns={{ xs: "1fr", sm: "1fr", md: "1fr" }}>
               {reservations.map((r: any) => (
                 <Card
                   key={r.id}

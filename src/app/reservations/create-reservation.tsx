@@ -24,7 +24,12 @@ interface Table {
   capacity: number;
 }
 
-export default function CreateReservationForm() {
+// ✅ Prop opcional que ejecuta un callback cuando se crea la reserva
+interface CreateReservationFormProps {
+  onCreated?: () => void;
+}
+
+export default function CreateReservationForm({ onCreated }: CreateReservationFormProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState('');
@@ -33,7 +38,6 @@ export default function CreateReservationForm() {
   const [date, setDate] = useState('');
   const [message, setMessage] = useState('');
 
-  // Obtener la lista de restaurantes
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
@@ -47,13 +51,13 @@ export default function CreateReservationForm() {
     fetchRestaurants();
   }, []);
 
-  // Obtener la lista de mesas según el restaurante seleccionado
   useEffect(() => {
     if (selectedRestaurantId) {
       const fetchTables = async () => {
         try {
-          // Aquí usamos tu endpoint de mesas
-          const response = await fetch(`http://localhost:4000/restaurants/${selectedRestaurantId}/tables`);
+          const response = await fetch(
+            `http://localhost:4000/restaurants/${selectedRestaurantId}/tables`
+          );
           const data = await response.json();
           setTables(data);
         } catch (error) {
@@ -71,7 +75,7 @@ export default function CreateReservationForm() {
     e.preventDefault();
     setMessage('Creando reserva...');
 
-    const userId = '89fec011-6bf9-4af7-a2a4-50ade15d9238'; // tu JWT userId
+    const userId = '89fec011-6bf9-4af7-a2a4-50ade15d9238';
 
     const reservationData: CreateReservationDto = {
       date,
@@ -95,6 +99,9 @@ export default function CreateReservationForm() {
 
       const newReservation = await response.json();
       setMessage(`Reserva creada con éxito para la mesa ${newReservation.tableId}`);
+
+      if (onCreated) onCreated();
+
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
     }
@@ -103,15 +110,35 @@ export default function CreateReservationForm() {
   return (
     <Box
       component="form"
-      sx={{ p: 4, maxWidth: 600, mx: 'auto', border: '1px solid #ffffff', borderRadius: 2, boxShadow: 3, display: 'flex', flexDirection: 'column', gap: 3 }}
+      sx={{
+        p: 4,
+        maxWidth: 600,
+        mx: 'auto',
+        border: '1px solid #ffffff',
+        borderRadius: 2,
+        boxShadow: 3,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+      }}
       onSubmit={handleSubmit}
     >
       <Typography variant="h5" component="h2" gutterBottom align="center">
         Crear Nueva Reserva
       </Typography>
 
-      {/* Selector de Restaurante */}
-      <FormControl fullWidth sx={{ '& .MuiInputBase-root': { color: 'white', '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } }, '& .MuiInputLabel-root': { color: 'white' } }}>
+      <FormControl
+        fullWidth
+        sx={{
+          '& .MuiInputBase-root': {
+            color: 'white',
+            '& fieldset': { borderColor: 'white' },
+            '&:hover fieldset': { borderColor: 'white' },
+            '&.Mui-focused fieldset': { borderColor: 'white' },
+          },
+          '& .MuiInputLabel-root': { color: 'white' },
+        }}
+      >
         <InputLabel>Restaurante</InputLabel>
         <Select
           value={selectedRestaurantId}
@@ -126,9 +153,20 @@ export default function CreateReservationForm() {
         </Select>
       </FormControl>
 
-      {/* Selector de Mesa */}
       {tables.length > 0 && (
-        <FormControl fullWidth sx={{ mt: 2, '& .MuiInputBase-root': { color: 'white', '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } }, '& .MuiInputLabel-root': { color: 'white' } }}>
+        <FormControl
+          fullWidth
+          sx={{
+            mt: 2,
+            '& .MuiInputBase-root': {
+              color: 'white',
+              '& fieldset': { borderColor: 'white' },
+              '&:hover fieldset': { borderColor: 'white' },
+              '&.Mui-focused fieldset': { borderColor: 'white' },
+            },
+            '& .MuiInputLabel-root': { color: 'white' },
+          }}
+        >
           <InputLabel>Mesa</InputLabel>
           <Select
             value={selectedTableId}
@@ -144,7 +182,6 @@ export default function CreateReservationForm() {
         </FormControl>
       )}
 
-      {/* Selector de fecha */}
       <TextField
         label="Fecha y Hora de la Reserva"
         type="datetime-local"
@@ -154,10 +191,16 @@ export default function CreateReservationForm() {
         fullWidth
         required
         InputLabelProps={{ shrink: true, style: { color: 'white' } }}
-        sx={{ '& .MuiInputBase-input': { color: 'white' }, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } } }}
+        sx={{
+          '& .MuiInputBase-input': { color: 'white' },
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': { borderColor: 'white' },
+            '&:hover fieldset': { borderColor: 'white' },
+            '&.Mui-focused fieldset': { borderColor: 'white' },
+          },
+        }}
       />
 
-      {/* Tamaño del grupo */}
       <TextField
         label="Número de personas"
         type="number"
@@ -166,7 +209,15 @@ export default function CreateReservationForm() {
         variant="outlined"
         fullWidth
         required
-        sx={{ '& .MuiInputBase-input': { color: 'white' }, '& .MuiInputLabel-root': { color: 'white' }, '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' }, '&:hover fieldset': { borderColor: 'white' }, '&.Mui-focused fieldset': { borderColor: 'white' } } }}
+        sx={{
+          '& .MuiInputBase-input': { color: 'white' },
+          '& .MuiInputLabel-root': { color: 'white' },
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': { borderColor: 'white' },
+            '&:hover fieldset': { borderColor: 'white' },
+            '&.Mui-focused fieldset': { borderColor: 'white' },
+          },
+        }}
       />
 
       <Button
@@ -180,7 +231,11 @@ export default function CreateReservationForm() {
       </Button>
 
       {message && (
-        <Typography color={message.includes('éxito') ? 'success.main' : 'error.main'} sx={{ mt: 2 }} align="center">
+        <Typography
+          color={message.includes('éxito') ? 'success.main' : 'error.main'}
+          sx={{ mt: 2 }}
+          align="center"
+        >
           {message}
         </Typography>
       )}

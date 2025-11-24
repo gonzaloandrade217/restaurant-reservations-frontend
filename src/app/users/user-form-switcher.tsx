@@ -3,7 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, Role } from "../../context/AuthContext";
-import { Box, TextField, Button, Typography, Checkbox, FormControlLabel } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Checkbox,
+  FormControlLabel,
+} from "@mui/material";
 
 declare global {
   interface Window {
@@ -22,9 +29,6 @@ export default function UserFormSwitcher() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState("");
 
-  // ----------------------------
-  // Manejo de login + token
-  // ----------------------------
   const handleLogin = (access_token: string, userRole: Role, userId: string) => {
     localStorage.setItem("authToken", access_token);
     localStorage.setItem("userRole", userRole);
@@ -36,9 +40,6 @@ export default function UserFormSwitcher() {
     else router.push("/users/dashboard");
   };
 
-  // ----------------------------
-  // LOGIN / REGISTRO NORMAL
-  // ----------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
@@ -55,6 +56,7 @@ export default function UserFormSwitcher() {
 
         const data = await res.json();
         handleLogin(data.access_token, data.user.role as Role, data.user.id);
+
         setMessage("Login exitoso!");
         setEmail("");
         setPassword("");
@@ -64,7 +66,6 @@ export default function UserFormSwitcher() {
       return;
     }
 
-    // REGISTRO NORMAL
     const userData = {
       name,
       email,
@@ -82,7 +83,7 @@ export default function UserFormSwitcher() {
       if (!response.ok) {
         const errorData = await response.json();
 
-        if (errorData.message?.includes("email") || errorData.message?.includes("Email")) {
+        if (errorData.message?.includes("email")) {
           throw new Error("El correo ya está registrado. Probá iniciando sesión.");
         }
 
@@ -96,9 +97,6 @@ export default function UserFormSwitcher() {
     }
   };
 
-  // ----------------------------
-  // LOGIN CON GOOGLE
-  // ----------------------------
   const handleCredentialResponse = async (response: any) => {
     const idToken = response.credential;
 
@@ -116,10 +114,9 @@ export default function UserFormSwitcher() {
           setMessage("El correo ya está registrado. Iniciá sesión en vez de registrarte.");
           return;
         }
-        
-          throw new Error("Error en el login con Google");
-        }
 
+        throw new Error("Error en el login con Google");
+      }
 
       const data = await res.json();
       handleLogin(data.access_token, data.user.role as Role, data.user.id);
@@ -128,9 +125,6 @@ export default function UserFormSwitcher() {
     }
   };
 
-  // ----------------------------
-  // Montaje del botón de Google
-  // ----------------------------
   useEffect(() => {
     if (!window.google) return;
 
@@ -148,37 +142,46 @@ export default function UserFormSwitcher() {
   return (
     <Box
       sx={{
-        p: 4,
-        maxWidth: 400,
+        p: { xs: 2, sm: 3, md: 4 },
+        width: "100%",
+        maxWidth: 420,
         mx: "auto",
-        border: "1px solid #ffffff",
-        borderRadius: 2,
+        mt: { xs: 3, sm: 5 },
+        border: "1px solid white",
+        borderRadius: 3,
         boxShadow: 3,
+        bgcolor: "rgba(0,0,0,0.35)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         flexDirection: "column",
-        gap: 3,
+        gap: { xs: 2, md: 3 },
       }}
     >
-      <Typography variant="h5" component="h2" gutterBottom align="center">
+      <Typography
+        variant="h5"
+        align="center"
+        sx={{
+          color: "white",
+          fontSize: { xs: "1.5rem", sm: "1.7rem" },
+        }}
+      >
         {isLogin ? "Iniciar Sesión" : "Crear Nuevo Usuario"}
       </Typography>
 
       {!isLogin && (
         <TextField
           label="Nombre"
-          type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          variant="outlined"
-          fullWidth
           required
+          fullWidth
+          InputLabelProps={{ style: { color: "white" } }}
+          inputProps={{ style: { color: "white" } }}
           sx={{
-            "& .MuiInputBase-input": { color: "white" },
-            "& .MuiInputLabel-root": { color: "white" },
             "& .MuiOutlinedInput-root": {
               "& fieldset": { borderColor: "white" },
               "&:hover fieldset": { borderColor: "white" },
-              "&.Mui-focused fieldset": { borderColor: "white" },
+              "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
             },
           }}
         />
@@ -189,16 +192,15 @@ export default function UserFormSwitcher() {
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        variant="outlined"
-        fullWidth
         required
+        fullWidth
+        InputLabelProps={{ style: { color: "white" } }}
+        inputProps={{ style: { color: "white" } }}
         sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
           "& .MuiOutlinedInput-root": {
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
+            "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
           },
         }}
       />
@@ -208,16 +210,15 @@ export default function UserFormSwitcher() {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        variant="outlined"
-        fullWidth
         required
+        fullWidth
+        InputLabelProps={{ style: { color: "white" } }}
+        inputProps={{ style: { color: "white" } }}
         sx={{
-          "& .MuiInputBase-input": { color: "white" },
-          "& .MuiInputLabel-root": { color: "white" },
           "& .MuiOutlinedInput-root": {
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "white" },
+            "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
           },
         }}
       />
@@ -231,36 +232,67 @@ export default function UserFormSwitcher() {
               sx={{ color: "white" }}
             />
           }
-          label={<Typography sx={{ color: "white" }}>¿Registrarse como Administrador?</Typography>}
+          label={<Typography sx={{ color: "white" }}>Registrarse como Administrador</Typography>}
         />
       )}
 
       {message && (
         <Typography
-          color={message.includes("éxito") || message.includes("Login") ? "success.main" : "error.main"}
           align="center"
+          sx={{
+            color: message.includes("éxito") || message.includes("Login")
+              ? "success.main"
+              : "error.main",
+          }}
         >
           {message}
         </Typography>
       )}
 
-      <Button type="submit" variant="contained" color="primary" fullWidth onClick={handleSubmit}>
+      {/* BOTÓN NARANJA */}
+      <Button
+        type="submit"
+        fullWidth
+        onClick={handleSubmit}
+        sx={{
+          backgroundColor: "#FF7B00",
+          color: "white",
+          py: 1.2,
+          fontSize: { xs: "1rem", sm: "1.05rem" },
+          borderRadius: 2,
+          "&:hover": {
+            backgroundColor: "#e56f00",
+          },
+        }}
+      >
         {isLogin ? "Iniciar sesión" : "Registrar"}
       </Button>
 
+      {/* Alternar */}
       <Button
         variant="text"
-        sx={{ mt: 1, color: "white" }}
+        sx={{
+          mt: 1,
+          color: "white",
+          fontSize: { xs: "0.9rem", sm: "1rem" },
+        }}
         onClick={() => {
           setIsLogin(!isLogin);
           setMessage("");
         }}
       >
-        {isLogin ? "¿No tienes cuenta? Registrarse" : "¿Ya tienes cuenta? Iniciar sesión"}
+        {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciar sesión"}
       </Button>
 
-      {/* Botón de Google */}
-      <div id="googleSignInDiv" style={{ marginTop: 20, display: "flex", justifyContent: "center" }}></div>
+      {/* GOOGLE BUTTON */}
+      <div
+        id="googleSignInDiv"
+        style={{
+          marginTop: 15,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      ></div>
     </Box>
   );
 }

@@ -17,7 +17,6 @@ import {
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
-
 import PeopleIcon from "@mui/icons-material/People";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
@@ -34,8 +33,7 @@ export default function AdminDashboardPage() {
   const [refreshUsers, setRefreshUsers] = useState(0);
   const [refreshReservations, setRefreshReservations] = useState(0);
 
-  const [section, setSection] = useState<"usuarios" | "restaurantes" | "reservas" | null>(null);
-
+  const [section, setSection] = useState< "restaurantes" | "reservas" | "usuarios">("restaurantes");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const handleRestaurantCreated = () => {
@@ -43,9 +41,9 @@ export default function AdminDashboardPage() {
   };
 
   const tabValue =
-    section === "usuarios" ? 0 :
-    section === "restaurantes" ? 1 :
-    section === "reservas" ? 2 :
+    section === "restaurantes" ? 0 :
+    section === "reservas" ? 1 :
+    section === "usuarios" ? 2 :
     false;
 
   // ------------------------ MENÚ HAMBURGUESA ------------------------
@@ -65,16 +63,32 @@ export default function AdminDashboardPage() {
     window.location.href = "/login";
   };
 
-  const handleDeleteAccount = () => {
-    if (confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) {
-      alert("Acá iría la lógica para eliminar al usuario");
+  const handleDeleteAccount = async () => {
+    if (!confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) return;
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const userId = localStorage.getItem("userId"); // asumimos que guardaste el id del admin
+      if (!token || !userId) throw new Error("No estás autenticado.");
+
+      const res = await fetch(`http://localhost:4000/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Error al eliminar usuario");
+
+      alert("Usuario eliminado correctamente.");
+      localStorage.clear();
+      window.location.href = "/";
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
   return (
     <Container sx={{ py: 4 }}>
-
-      {/* ---------------------- NAVBAR (UNA SOLA LÍNEA) ---------------------- */}
+      {/* ---------------------- NAVBAR RESPONSIVE ---------------------- */}
       <Paper
         elevation={3}
         sx={{
@@ -83,117 +97,73 @@ export default function AdminDashboardPage() {
           py: 1.5,
           backgroundColor: "#FF8C42",
           display: "flex",
-          flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 2,
           borderRadius: 2,
-          overflowX: "auto",
+          overflowX: "auto"
         }}
       >
-
-        {/* IZQUIERDA → TÍTULO */}
         <Typography
           sx={{
             fontFamily: "'Playfair Display', serif",
             fontSize: "1.4rem",
             fontWeight: 700,
             color: "#fff",
-            whiteSpace: "nowrap",
+            whiteSpace: "nowrap"
           }}
         >
-          Administración
+          MesaSegura - Administración
         </Typography>
 
-        {/* CENTRO → TABS */}
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => {
-            if (newValue === 0) setSection("usuarios");
-            if (newValue === 1) setSection("restaurantes");
-            if (newValue === 2) setSection("reservas");
-          }}
-          variant="scrollable"
-          scrollButtons={false}
-          textColor="inherit"
-          TabIndicatorProps={{ style: { background: "white" } }}
-          sx={{
-            flex: 1,
-            "& .MuiTab-root": {
-              minWidth: "120px",
-              padding: "6px 10px",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              whiteSpace: "nowrap"
-            },
-          }}
-        >
-          <Tab icon={<PeopleIcon />} label="Usuarios" />
-          <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-          <Tab icon={<BookOnlineIcon />} label="Reservas" />
-        </Tabs>
+        {!isMobile && (
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => {
+              if (newValue === 0) setSection("restaurantes");
+              if (newValue === 1) setSection("reservas");
+              if (newValue === 2) setSection("usuarios");
+            }}
+            textColor="inherit"
+            TabIndicatorProps={{ style: { background: "white" } }}
+            sx={{
+              flex: 1,
+              "& .MuiTab-root": {
+                minWidth: "120px",
+                padding: "6px 10px",
+                fontSize: "0.85rem",
+                fontWeight: 600
+              }
+            }}
+          >
+            <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
+            <Tab icon={<BookOnlineIcon />} label="Reservas" />
+            <Tab icon={<PeopleIcon />} label="Usuarios" />
+          </Tabs>
+        )}
 
-        {/* DERECHA → MENÚ HAMBURGUESA */}
         <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
           <MenuIcon />
         </IconButton>
 
-        <Menu
-          anchorEl={menuAnchor}
-          open={openMenu}
-          onClose={handleMenuClose}
-          PaperProps={{
-          }}
-        >
-          <MenuItem
-            onClick={() => {
-              handleMenuClose();
-              handleLogout();
-            }}
-            sx={{ "&:hover": { bgcolor: "#222" } }}
-          >
-            Cerrar sesión
-          </MenuItem>
+        <Menu anchorEl={menuAnchor} open={openMenu} onClose={handleMenuClose}>
+          {isMobile && [
+            <MenuItem key="restaurantes" onClick={() => { setSection("restaurantes"); handleMenuClose(); }}>Restaurantes</MenuItem>,
+            <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>Reservas</MenuItem>,
+            <MenuItem key="usuarios" onClick={() => { setSection("usuarios"); handleMenuClose(); }}>Usuarios</MenuItem>,
+            <Divider key="divider" sx={{ my: 1 }} />,
+          ]}
 
-          <MenuItem
-            onClick={() => {
-              handleMenuClose();
-              handleDeleteAccount();
-            }}
-            sx={{ color: "red", "&:hover": { bgcolor: "#300" } }}
-          >
+          <MenuItem onClick={() => { handleMenuClose(); handleLogout(); }}>Cerrar sesión</MenuItem>
+          <MenuItem onClick={() => { handleMenuClose(); handleDeleteAccount(); }} sx={{ color: "red" }}>
             Eliminar cuenta
           </MenuItem>
         </Menu>
-
       </Paper>
-
-      {/* ---------------------- SECCIÓN USUARIOS ---------------------- */}
-      {section === "usuarios" && (
-        <Box sx={{
-          mb: 6,
-          p: 3,
-          backgroundColor: "black",
-          border: "1px solid white",
-          borderRadius: 2,
-        }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
-            Gestión de Usuarios
-          </Typography>
-          <Divider sx={{ my: 3, borderColor: "white" }} />
-          <UserList refresh={refreshUsers} />
-        </Box>
-      )}
 
       {/* ---------------------- SECCIÓN RESTAURANTES ---------------------- */}
       {section === "restaurantes" && (
-        <Box sx={{
-          mb: 6,
-          p: 3,
-          backgroundColor: "black",
-          border: "1px solid white",
-          borderRadius: 2,
-        }}>
+        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
           <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
             Gestión de Restaurantes
           </Typography>
@@ -224,20 +194,26 @@ export default function AdminDashboardPage() {
 
       {/* ---------------------- SECCIÓN RESERVAS ---------------------- */}
       {section === "reservas" && (
-        <Box sx={{
-          mb: 6,
-          p: 3,
-          backgroundColor: "black",
-          border: "1px solid white",
-          borderRadius: 2,
-        }}>
+        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
           <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
-            Reservas Pendientes
+            Reservas
           </Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <AdminReservationsList refresh={refreshReservations} />
         </Box>
       )}
+
+      {/* ---------------------- SECCIÓN USUARIOS ---------------------- */}
+      {section === "usuarios" && (
+        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
+          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
+            Lista de Usuarios
+          </Typography>
+          <Divider sx={{ my: 3, borderColor: "white" }} />
+          <UserList refresh={refreshUsers} />
+        </Box>
+      )}
+
     </Container>
   );
 }
