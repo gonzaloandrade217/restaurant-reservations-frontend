@@ -19,7 +19,7 @@ export default function MyReservationsPage() {
         if (!token || !userId) throw new Error("Sesión inválida");
 
         const res = await fetch(
-          `http://localhost:4000/reservations/user/${userId}`,
+          `http://192.168.1.6:4000/reservations/user/${userId}`,
           {
             headers: {
               "Content-Type": "application/json",

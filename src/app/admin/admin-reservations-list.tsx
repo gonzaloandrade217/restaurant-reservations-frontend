@@ -8,7 +8,7 @@ interface Reservation {
   date: string;
   partySize: number;
   restaurant: { name: string };
-  user: { name: string; email: string };
+  user: { name: string; email: string; };
 }
 
 interface AdminReservationsListProps {
@@ -29,25 +29,39 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
       const token = localStorage.getItem("authToken");
       const adminId = localStorage.getItem("userId");
 
+      console.log("Admin ID desde localStorage:", adminId);
+
       if (!token || !adminId) throw new Error("No estás autenticado como admin.");
 
       // Pendientes
-      const pendingRes = await fetch(`http://localhost:4000/reservations/admin/pending/${adminId}`, {
+      console.log("Token:", token, "Admin ID:", adminId);
+      const pendingRes = await fetch(`http://192.168.1.6:4000/reservations/admin/pending/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!pendingRes.ok) throw new Error("Error al cargar reservas pendientes");
+
+      if (!pendingRes.ok) {
+        throw new Error(`Error al cargar reservas pendientes: ${pendingRes.statusText}`);
+      }
+
       const pendingData: Reservation[] = await pendingRes.json();
+      console.log("Reservas pendientes recibidas:", pendingData);
       setPendingReservations(pendingData);
 
       // Aceptadas
-      const acceptedRes = await fetch(`http://localhost:4000/reservations/admin/accepted/${adminId}`, {
+      const acceptedRes = await fetch(`http://192.168.1.6:4000/reservations/admin/accepted/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!acceptedRes.ok) throw new Error("Error al cargar reservas aceptadas");
+
+      if (!acceptedRes.ok) {
+        throw new Error(`Error al cargar reservas aceptadas: ${acceptedRes.statusText}`);
+      }
+
       const acceptedData: Reservation[] = await acceptedRes.json();
+      console.log("Reservas aceptadas recibidas:", acceptedData);
       setAcceptedReservations(acceptedData);
 
     } catch (err: any) {
+      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -62,7 +76,7 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
-    const res = await fetch(`http://localhost:4000/reservations/${id}/${action}`, {
+    const res = await fetch(`http://192.168.1.6:4000/reservations/${id}/${action}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -75,9 +89,12 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
   return (
     <Container sx={{ mt: 4 }}>
-      {/* ---------------------- RESERVAS PENDIENTES ---------------------- */}
+      {/* RESERVAS PENDIENTES */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Pendientes</Typography>
       <Grid container spacing={2} sx={{ mb: 6 }}>
+        {pendingReservations.length === 0 && (
+          <Typography sx={{ ml: 2 }}>No hay reservas pendientes</Typography>
+        )}
         {pendingReservations.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
             <Card sx={{ borderRadius: 2, p: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: '0.2s', ':hover': { transform: 'scale(1.02)' } }}>
@@ -106,10 +123,15 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
           </Grid>
         ))}
       </Grid>
-        <Divider sx={{ my: 3, borderColor: "white" }} />
-      {/* ---------------------- RESERVAS ACEPTADAS ---------------------- */}
+
+      <Divider sx={{ my: 3, borderColor: "white" }} />
+
+      {/* RESERVAS ACEPTADAS */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Aceptadas</Typography>
       <Grid container spacing={2}>
+        {acceptedReservations.length === 0 && (
+          <Typography sx={{ ml: 2 }}>No hay reservas aceptadas</Typography>
+        )}
         {acceptedReservations.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
             <Card sx={{ borderRadius: 2, p: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: '0.2s', ':hover': { transform: 'scale(1.02)' } }}>

@@ -90,7 +90,7 @@ export default function SelectSeatsPage() {
     };
 
     try {
-      const res = await fetch('http://localhost:4000/reservations', {
+      const res = await fetch('http://192.168.1.6:4000/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dto),

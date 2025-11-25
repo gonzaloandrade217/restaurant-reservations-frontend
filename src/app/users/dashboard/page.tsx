@@ -56,7 +56,7 @@ export default function UsersDashboardPage() {
       if (!token || !userId) throw new Error("No estás autenticado.");
 
 
-      const res = await fetch(`http://localhost:4000/users/${userId}`, {
+      const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,7 +91,7 @@ export default function UsersDashboardPage() {
         const token = localStorage.getItem("authToken");
         if (!token) throw new Error("No se encontró token.");
 
-        const res = await fetch("http://localhost:4000/restaurants", {
+        const res = await fetch("http://192.168.1.6:4000/restaurants", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -119,7 +119,7 @@ export default function UsersDashboardPage() {
         if (!token || !userId) throw new Error("Sesión inválida.");
 
         const res = await fetch(
-          `http://localhost:4000/reservations/user/${userId}`,
+          `http://192.168.1.6:4000/reservations/user/${userId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 

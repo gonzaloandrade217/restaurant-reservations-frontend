@@ -8,14 +8,14 @@ export default function LoginPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 20,
-        minHeight: "80vh", 
-        textAlign: "center",
+        gap: 10,            
+        padding: "10px",      
+        alignItems: "center", 
       }}
     >
-      <h1 style={{ fontSize: "3rem", fontWeight: "bold" }}>Bienvenido a MesaSegura</h1>
+      <h1 style={{ fontSize: "1.6rem", textAlign: "center", margin: 0 }}>
+        Bienvenido a MesaSegura
+      </h1>
       <UserFormSwitcher />
     </div>
   );

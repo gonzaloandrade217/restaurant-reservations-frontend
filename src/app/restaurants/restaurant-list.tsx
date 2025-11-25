@@ -43,7 +43,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
       if (!token) throw new Error('No se encontró token. Iniciá sesión como ADMIN.');
       if (role !== 'ADMIN') throw new Error('Necesitás ser ADMIN para ver la lista de restaurantes.');
 
-      const response = await fetch('http://localhost:4000/restaurants', {
+      const response = await fetch('http://192.168.1.6:4000/restaurants', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,

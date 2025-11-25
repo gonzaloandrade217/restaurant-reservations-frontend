@@ -46,7 +46,7 @@ export default function UserFormSwitcher() {
 
     if (isLogin) {
       try {
-        const res = await fetch("http://localhost:4000/users/login", {
+        const res = await fetch("http://192.168.1.6:4000/users/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -74,7 +74,7 @@ export default function UserFormSwitcher() {
     };
 
     try {
-      const response = await fetch("http://localhost:4000/users", {
+      const response = await fetch("http://192.168.1.6:4000/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -101,7 +101,7 @@ export default function UserFormSwitcher() {
     const idToken = response.credential;
 
     try {
-      const res = await fetch("http://localhost:4000/auth/google", {
+      const res = await fetch("http://192.168.1.6:4000/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken, role: isAdmin ? "ADMIN" : "USER" }),

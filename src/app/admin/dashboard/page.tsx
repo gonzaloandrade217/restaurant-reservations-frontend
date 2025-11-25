@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -40,6 +40,12 @@ export default function AdminDashboardPage() {
     setRefreshRestaurants(prev => prev + 1);
   };
 
+  useEffect(() => {
+    if (section === "reservas") {
+      setRefreshReservations(prev => prev + 1);
+    }
+  }, [section]);
+
   const tabValue =
     section === "restaurantes" ? 0 :
     section === "reservas" ? 1 :
@@ -71,7 +77,7 @@ export default function AdminDashboardPage() {
       const userId = localStorage.getItem("userId"); // asumimos que guardaste el id del admin
       if (!token || !userId) throw new Error("No estás autenticado.");
 
-      const res = await fetch(`http://localhost:4000/users/${userId}`, {
+      const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

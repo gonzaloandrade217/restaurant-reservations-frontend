@@ -24,7 +24,6 @@ interface Table {
   capacity: number;
 }
 
-// ✅ Prop opcional que ejecuta un callback cuando se crea la reserva
 interface CreateReservationFormProps {
   onCreated?: () => void;
 }
@@ -41,7 +40,7 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const response = await fetch('http://localhost:4000/restaurants');
+        const response = await fetch('http://192.168.1.6:4000/restaurants');
         const data = await response.json();
         setRestaurants(data);
       } catch (error) {
@@ -56,7 +55,7 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
       const fetchTables = async () => {
         try {
           const response = await fetch(
-            `http://localhost:4000/restaurants/${selectedRestaurantId}/tables`
+            `http://192.168.1.6:4000/restaurants/${selectedRestaurantId}/tables`
           );
           const data = await response.json();
           setTables(data);
@@ -86,7 +85,7 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
     };
 
     try {
-      const response = await fetch('http://localhost:4000/reservations', {
+      const response = await fetch('http://192.168.1.6:4000/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reservationData),

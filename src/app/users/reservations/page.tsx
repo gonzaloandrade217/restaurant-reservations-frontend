@@ -31,8 +31,8 @@ export default function UserReservationsPage() {
         };
 
         const [acceptedRes, rejectedRes] = await Promise.all([
-          fetch(`http://localhost:4000/reservations/user/accepted?userId=${userId}`, { headers }),
-          fetch(`http://localhost:4000/reservations/user/rejected?userId=${userId}`, { headers }),
+          fetch(`http://192.168.1.6:4000/reservations/user/accepted?userId=${userId}`, { headers }),
+          fetch(`http://192.168.1.6:4000/reservations/user/rejected?userId=${userId}`, { headers }),
         ]);
 
         const acceptedData = await acceptedRes.json();
