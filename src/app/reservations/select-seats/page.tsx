@@ -15,7 +15,8 @@ import {
 
 export default function SelectSeatsPage() {
   const [partySize, setPartySize] = useState<number>(1);
-  const [dateTime, setDateTime] = useState<string>(''); 
+  const [customPartySize, setCustomPartySize] = useState<string>(''); // para "Más..."
+  const [dateTime, setDateTime] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const router = useRouter();
 
@@ -50,7 +51,7 @@ export default function SelectSeatsPage() {
       setDateTime(value);
       return;
     }
-    d.setMinutes(0, 0, 0); 
+    d.setMinutes(0, 0, 0);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -82,11 +83,19 @@ export default function SelectSeatsPage() {
       return;
     }
 
+    const finalPartySize =
+      partySize === 99 ? Number(customPartySize) || 0 : partySize;
+
+    if (finalPartySize < 1) {
+      setMessage('Ingresá una cantidad válida.');
+      return;
+    }
+
     const dto = {
       restaurantId,
       userId,
       date: iso,
-      partySize,
+      partySize: finalPartySize,
     };
 
     try {
@@ -97,8 +106,8 @@ export default function SelectSeatsPage() {
       });
 
       if (res.ok) {
-        setMessage(' Reserva enviada. El admin la revisará y la aceptará/rechazará.');
-        setTimeout(() => router.push('/users/my-reservations'), 1000);
+        setMessage(' Reserva enviada. El admin la revisará.');
+        setTimeout(() => router.push('/users/dashboard'), 1000);
       } else {
         const text = await res.text().catch(() => null);
         let errMsg = text || `Error ${res.status}`;
@@ -126,16 +135,26 @@ export default function SelectSeatsPage() {
         flexDirection: 'column',
         gap: 3,
         color: 'white',
-        border: '2px solid white',
+        border: '2px solid #ff9800',
         borderRadius: 3,
         backgroundColor: 'rgba(12, 12, 12, 0.75)',
       }}
     >
-      <Typography variant="h5" textAlign="center">
+
+      {/* BOTÓN VOLVER AL INICIO */}
+      <Button
+        onClick={() => router.push('/users/dashboard')}
+        variant="contained"
+        sx={{ backgroundColor: '#fba700ff', color: 'black', fontWeight: 'bold' }}
+      >
+        Volver
+      </Button>
+
+      <Typography variant="h5" textAlign="center" sx={{ color: '#ffffffff' }}>
         Reservar en el restaurante
       </Typography>
 
-      {/* Campo datetime-local nativo (compatibilidad garantizada). step=3600 para 1h */}
+      {/* Fecha y hora */}
       <TextField
         label="Fecha y hora"
         type="datetime-local"
@@ -143,52 +162,115 @@ export default function SelectSeatsPage() {
         onChange={(e) => handleDateTimeChange(e.target.value)}
         InputLabelProps={{ shrink: true }}
         inputProps={{
-          step: 3600, // segundos => 3600 = 1 hora
+          step: 3600,
           style: { color: 'white' },
         }}
         sx={{
           '& .MuiOutlinedInput-root': {
-            '& fieldset': { borderColor: 'white' },
-            '&:hover fieldset': { borderColor: '#00bfa5' },
+            '& fieldset': { borderColor: '#ff9800' },
+            '&:hover fieldset': { borderColor: '#ffb74d' },
             '& input': { color: 'white' },
-            '& .MuiSvgIcon-root': { color: 'white' }, 
+            '& .MuiSvgIcon-root': { color: 'white' },
           },
-          '& .MuiInputLabel-root': { color: 'white' },
+          '& .MuiInputLabel-root': { color: '#fdfbf9ff' },
           '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
-            filter: 'invert(1)', 
+            filter: 'invert(1)',
           },
         }}
         required
         fullWidth
       />
 
+      {/* Selector de personas */}
       <FormControl fullWidth>
-        <InputLabel sx={{ color: 'white' }}>Cantidad de personas</InputLabel>
+        <InputLabel sx={{ color: '#ffffffff' }}>Cantidad de personas</InputLabel>
         <Select
           value={partySize}
           label="Cantidad de personas"
-          onChange={(e) => setPartySize(Number(e.target.value))}
+          onChange={(e) => {
+            setPartySize(Number(e.target.value));
+            if (Number(e.target.value) !== 99) setCustomPartySize('');
+          }}
           sx={{
             color: 'white',
-            '.MuiSvgIcon-root': { color: 'white' },
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#00bfa5' },
+            '.MuiSvgIcon-root': { color: '#ff9800' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#ff9800' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#ffb74d' },
           }}
         >
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-            <MenuItem key={n} value={n} sx={{ color: 'white', backgroundColor: '#000' }}>
-              {n}
-            </MenuItem>
-          ))}
+          {[1, 2, 3, 4].map((n) => (
+  <MenuItem
+    key={n}
+    value={n}
+    sx={{
+      color: 'white',
+      backgroundColor: '#000',
+      '&:hover': {
+        backgroundColor: '#ff9800',
+        color: 'black',
+      },
+      '&.Mui-selected': {
+        backgroundColor: '#ff9800 !important',
+        color: 'black',
+      },
+      '&.Mui-selected:hover': {
+        backgroundColor: '#fb8c00 !important',
+        color: 'black',
+      },
+    }}
+  >
+    {n}
+  </MenuItem>
+))}
+<MenuItem
+  value={99}
+  sx={{
+    color: 'white',
+    backgroundColor: '#000',
+    '&:hover': {
+      backgroundColor: '#ff9800',
+      color: 'black',
+    },
+    '&.Mui-selected': {
+      backgroundColor: '#ff9800 !important',
+      color: 'black',
+    },
+    '&.Mui-selected:hover': {
+      backgroundColor: '#fb8c00 !important',
+      color: 'black',
+    },
+  }}
+>
+            Más...
+          </MenuItem>
         </Select>
       </FormControl>
+
+      {/* Input extra si eligió "Más..." */}
+      {partySize === 99 && (
+        <TextField
+          label="Cantidad personalizada"
+          type="number"
+          value={customPartySize}
+          onChange={(e) => setCustomPartySize(e.target.value)}
+          fullWidth
+          InputLabelProps={{ style: { color: '#ff9800' } }}
+          inputProps={{ style: { color: 'white' }, min: 1 }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': { borderColor: '#ff9800' },
+              '&:hover fieldset': { borderColor: '#ffb74d' },
+            },
+          }}
+        />
+      )}
 
       <Button
         type="submit"
         variant="contained"
         sx={{
-          bgcolor: '#00bfa5',
-          '&:hover': { bgcolor: '#009e8e' },
+          bgcolor: '#ff9800',
+          '&:hover': { bgcolor: '#fb8c00' },
           fontWeight: 'bold',
         }}
       >
@@ -196,7 +278,7 @@ export default function SelectSeatsPage() {
       </Button>
 
       {message && (
-        <Typography textAlign="center" sx={{ mt: 1 }}>
+        <Typography textAlign="center" sx={{ mt: 1, color: '#ff9800' }}>
           {message}
         </Typography>
       )}

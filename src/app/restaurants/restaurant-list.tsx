@@ -50,19 +50,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
         },
       });
 
-      if (response.status === 401) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message || 'Sesión inválida o token expirado. Iniciá sesión nuevamente.');
-      }
-
-      if (response.status === 403) {
-        throw new Error('No autorizado (403). Necesitás permisos de administrador.');
-      }
-
-      if (!response.ok) {
-        const body = await response.text().catch(() => null);
-        throw new Error(body || `Error al cargar restaurantes (${response.status})`);
-      }
+      if (!response.ok) throw new Error(`Error al cargar restaurantes (${response.status})`);
 
       const data = await response.json();
       setRestaurants(data);
@@ -76,6 +64,30 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
   useEffect(() => {
     fetchRestaurants();
   }, [refresh]);
+
+  const handleDelete = async (id: string) => {
+    const confirmDelete = window.confirm("¿Seguro que querés eliminar este restaurante?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("No hay token");
+
+      const res = await fetch(`http://192.168.1.6:4000/restaurants/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Error eliminando restaurante");
+
+      // Actualizar lista sin recargar
+      setRestaurants((prev) => prev.filter((r) => r.id !== id));
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   if (loading) return <Typography>Cargando restaurantes...</Typography>;
 
@@ -94,10 +106,8 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
           <Button
             variant="outlined"
             onClick={() => {
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userRole');
-              }
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('userRole');
               router.push('/login');
             }}
           >
@@ -109,7 +119,6 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
 
   return (
     <Container sx={{ mt: 4 }}>
-      {/* GRID RESPONSIVE CON TARJETAS */}
       <Grid container spacing={2}>
         {restaurants.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
@@ -161,9 +170,19 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
                 <Typography variant="subtitle2" color="text.secondary">
                   Descripción:
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body2" sx={{ mb: 2 }}>
                   {r.description || '-'}
                 </Typography>
+
+                {/* 🔥 BOTÓN ELIMINAR RESTAURANTE */}
+                <Button
+                  variant="contained"
+                  color="error"
+                  fullWidth
+                  onClick={() => handleDelete(r.id)}
+                >
+                  Eliminar
+                </Button>
               </CardContent>
             </Card>
           </Grid>
