@@ -101,7 +101,7 @@ export default function AdminDashboardPage() {
           mb: 4,
           px: 2,
           py: 1.5,
-          backgroundColor: "#FF8C42",
+          backgroundColor: "#ff9800",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
             sx={{
               mt: 2,
               mb: 3,
-              backgroundColor: "#FF8C42",
+              backgroundColor: "#ff9800",
               "&:hover": { backgroundColor: "#e67834" }
             }}
             onClick={() => setShowCreateForm(prev => !prev)}

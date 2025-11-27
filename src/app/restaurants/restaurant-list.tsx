@@ -180,7 +180,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
                   onClick={() => router.push(`/restaurants/edit/${r.id}`)}
                   sx={{
                     mb: 1,
-                    bgcolor: "#f09002ff",
+                    bgcolor: "#ff9800",
                     color: "white",
                     fontWeight: "bold",
                     ":hover": { bgcolor: "#9f6815ff" },

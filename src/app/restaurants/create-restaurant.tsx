@@ -167,7 +167,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         type="submit"
         fullWidth
         sx={{
-          backgroundColor: "#FF7B00",
+          backgroundColor: "#ff9800",
           color: "white",
           py: { xs: 1.2, sm: 1.4 },
           fontSize: { xs: "0.95rem", sm: "1rem" },

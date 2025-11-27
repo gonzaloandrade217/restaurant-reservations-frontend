@@ -145,7 +145,7 @@ export default function SelectSeatsPage() {
       <Button
         onClick={() => router.push('/users/dashboard')}
         variant="contained"
-        sx={{ backgroundColor: '#fba700ff', color: 'black', fontWeight: 'bold' }}
+        sx={{ backgroundColor: '#ff9800', color: 'white', fontWeight: 'bold' }}
       >
         Volver
       </Button>

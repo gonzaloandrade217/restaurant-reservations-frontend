@@ -23,7 +23,7 @@ export default function EditRestaurantPage() {
     cantidadMesas: 0,
   });
 
-  // === CARGAR DATOS DEL RESTAURANTE ===
+  // CARGAR DATOS DEL RESTAURANTE 
   useEffect(() => {
     const loadData = async () => {
       const token = localStorage.getItem("authToken");
@@ -48,12 +48,12 @@ export default function EditRestaurantPage() {
     if (id) loadData();
   }, [id]);
 
-  // === CAMBIO DE CAMPOS ===
+  // CAMBIO DE CAMPOS 
   const handleChange = (e: any) => {
     setRestaurant({ ...restaurant, [e.target.name]: e.target.value });
   };
 
-  // === GUARDAR CAMBIOS ===
+  // GUARDAR CAMBIOS 
   const handleSave = async () => {
     const token = localStorage.getItem("authToken");
 
@@ -187,7 +187,7 @@ export default function EditRestaurantPage() {
         variant="contained"
         onClick={handleSave}
         sx={{
-          bgcolor: "#ff9900ff",
+          bgcolor: "#ff9800",
           color: "white",
           fontWeight: "bold",
           mb: 2,
@@ -203,7 +203,7 @@ export default function EditRestaurantPage() {
         variant="contained"
         onClick={() => router.push("/admin/dashboard")}
         sx={{
-          bgcolor: "#ff9900ff",
+          bgcolor: "#ff9800",
           color: "white",
           fontWeight: "bold",
           ":hover": { bgcolor: "#9f68115" },

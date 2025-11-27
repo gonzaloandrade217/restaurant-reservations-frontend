@@ -181,7 +181,7 @@ export default function UserFormSwitcher() {
             "& .MuiOutlinedInput-root": {
               "& fieldset": { borderColor: "white" },
               "&:hover fieldset": { borderColor: "white" },
-              "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
+              "&.Mui-focused fieldset": { borderColor: "#ff9800" },
             },
           }}
         />
@@ -200,7 +200,7 @@ export default function UserFormSwitcher() {
           "& .MuiOutlinedInput-root": {
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
+            "&.Mui-focused fieldset": { borderColor: "#ff9800" },
           },
         }}
       />
@@ -218,7 +218,7 @@ export default function UserFormSwitcher() {
           "& .MuiOutlinedInput-root": {
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
-            "&.Mui-focused fieldset": { borderColor: "#FF7B00" },
+            "&.Mui-focused fieldset": { borderColor: "#ff9800" },
           },
         }}
       />
@@ -255,7 +255,7 @@ export default function UserFormSwitcher() {
         fullWidth
         onClick={handleSubmit}
         sx={{
-          backgroundColor: "#FF7B00",
+          backgroundColor: "#ff9800",
           color: "white",
           py: 1.2,
           fontSize: { xs: "1rem", sm: "1.05rem" },

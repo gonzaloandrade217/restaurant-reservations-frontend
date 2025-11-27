@@ -59,7 +59,7 @@ export default function UserReservationsPage() {
         Mis Reservas
       </Typography>
 
-      <Typography variant="h5" sx={{ mt: 3 }}>✅ Aceptadas</Typography>
+      <Typography variant="h5" sx={{ mt: 3 }}> Aceptadas</Typography>
       {accepted.length === 0 && <Typography>No tenés reservas aceptadas.</Typography>}
       {accepted.map(r => (
         <Card key={r.id} sx={{ mt: 2 }}>
@@ -71,7 +71,7 @@ export default function UserReservationsPage() {
         </Card>
       ))}
 
-      <Typography variant="h5" sx={{ mt: 4 }}>❌ Rechazadas</Typography>
+      <Typography variant="h5" sx={{ mt: 4 }}> Rechazadas</Typography>
       {rejected.length === 0 && <Typography>No tenés reservas rechazadas.</Typography>}
       {rejected.map(r => (
         <Card key={r.id} sx={{ mt: 2 }}>
