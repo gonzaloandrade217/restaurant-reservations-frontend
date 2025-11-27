@@ -82,7 +82,6 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
 
       if (!res.ok) throw new Error("Error eliminando restaurante");
 
-      // Actualizar lista sin recargar
       setRestaurants((prev) => prev.filter((r) => r.id !== id));
     } catch (err: any) {
       alert(err.message);
@@ -174,7 +173,23 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
                   {r.description || '-'}
                 </Typography>
 
-                {/* 🔥 BOTÓN ELIMINAR RESTAURANTE */}
+                {/* BOTÓN EDITAR - AHORA NARANJA */}
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => router.push(`/restaurants/edit/${r.id}`)}
+                  sx={{
+                    mb: 1,
+                    bgcolor: "#f09002ff",
+                    color: "white",
+                    fontWeight: "bold",
+                    ":hover": { bgcolor: "#9f6815ff" },
+                  }}
+                >
+                  Editar
+                </Button>
+
+                {/* BOTÓN ELIMINAR */}
                 <Button
                   variant="contained"
                   color="error"

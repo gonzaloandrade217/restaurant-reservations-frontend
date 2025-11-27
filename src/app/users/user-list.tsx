@@ -40,7 +40,7 @@ export default function UserList({ refresh }: UserListProps) {
       if (!token) throw new Error('No se encontró token. Iniciá sesión como ADMIN.');
       if (role !== 'ADMIN') throw new Error('Necesitás ser ADMIN para ver la lista de usuarios.');
 
-      const response = await fetch('http://192.168.1.6:4000/users', {
+      const response = await fetch('http://192.168.1.6:4000/users/with-reservations', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
