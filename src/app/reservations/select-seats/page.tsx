@@ -15,7 +15,7 @@ import {
 
 export default function SelectSeatsPage() {
   const [partySize, setPartySize] = useState<number>(1);
-  const [customPartySize, setCustomPartySize] = useState<string>(''); // para "Más..."
+  const [customPartySize, setCustomPartySize] = useState<string>(''); 
   const [dateTime, setDateTime] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const router = useRouter();
