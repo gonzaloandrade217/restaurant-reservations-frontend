@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -159,11 +159,11 @@ export default function UsersDashboardPage() {
     return "orange";
   };
 
-  const tabValue = section === "restaurantes" ? 0 : section === "reservas" ? 1 : false;
+  const tabValue = section === "restaurantes" ? 0 : 1;
 
   return (
     <Container sx={{ py: 4, pb: isMobile ? 10 : 4 }}>
-      {/* NAVBAR SUPERIOR */}
+
       <Paper
         elevation={3}
         sx={{
@@ -172,10 +172,11 @@ export default function UsersDashboardPage() {
           backgroundColor: "#ff9800",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          gap: 2,
           borderRadius: 2,
         }}
       >
+        {/* Título */}
         <Typography
           sx={{
             fontFamily: "'Playfair Display', serif",
@@ -188,6 +189,29 @@ export default function UsersDashboardPage() {
           MesaSegura
         </Typography>
 
+        {/* DESKTOP: TABS PEGADOS AL TÍTULO */}
+        {!isMobile && (
+          <Tabs
+            value={tabValue}
+            onChange={(e, v) => setSection(v === 0 ? "restaurantes" : "reservas")}
+            textColor="inherit"
+            TabIndicatorProps={{ style: { background: "white" } }}
+            sx={{
+              ml: 0,
+              "& .MuiTab-root": {
+                minHeight: "45px",
+                padding: "4px 10px",
+              },
+            }}
+          >
+            <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
+            <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+          </Tabs>
+        )}
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* HAMBURGUESA */}
         <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
           <MenuIcon />
         </IconButton>
@@ -200,7 +224,7 @@ export default function UsersDashboardPage() {
         </Menu>
       </Paper>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CONTENIDO */}
       {section === "restaurantes" && (
         <Box sx={{ mb: 12 }}>
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
@@ -269,7 +293,7 @@ export default function UsersDashboardPage() {
           {reservationsError && <Typography color="error">{reservationsError}</Typography>}
 
           {!reservationsLoading && (
-            <Box display="grid" gap={2} gridTemplateColumns={{ xs: "1fr", sm: "1fr", md: "1fr" }}>
+            <Box display="grid" gap={2}>
               {reservations.map((r: any) => (
                 <Card key={r.id} sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2 }}>
                   <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
@@ -280,6 +304,7 @@ export default function UsersDashboardPage() {
                   </Typography>
                 </Card>
               ))}
+
               {reservations.length === 0 && (
                 <Typography align="center" sx={{ color: "white", mt: 2 }}>
                   No tenés reservas aún.
@@ -290,33 +315,35 @@ export default function UsersDashboardPage() {
         </Box>
       )}
 
-      {/* TABS / BOTONES INFERIORES */}
-      <Paper
-        elevation={3}
-        sx={{
-          position: isMobile ? "fixed" : "static",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "#ff9800",
-          borderRadius: isMobile ? 0 : 2,
-        }}
-      >
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => {
-            if (newValue === 0) setSection("restaurantes");
-            if (newValue === 1) setSection("reservas");
+      {/* MOBILE: TABS ABAJO */}
+      {isMobile && (
+        <Paper
+          elevation={3}
+          sx={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#ff9800",
+            borderRadius: 0,
           }}
-          textColor="inherit"
-          TabIndicatorProps={{ style: { background: "white" } }}
-          sx={{ "& .MuiTab-root": { minWidth: "100px", fontSize: ".75rem" } }}
-          variant="fullWidth"
         >
-          <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-          <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
-        </Tabs>
-      </Paper>
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => {
+              if (newValue === 0) setSection("restaurantes");
+              if (newValue === 1) setSection("reservas");
+            }}
+            textColor="inherit"
+            TabIndicatorProps={{ style: { background: "white" } }}
+            variant="fullWidth"
+          >
+            <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
+            <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+          </Tabs>
+        </Paper>
+      )}
+
     </Container>
   );
 }
