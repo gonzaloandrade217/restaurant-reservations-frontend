@@ -99,6 +99,19 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     }
   };
 
+  const handleCancel = async (id: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    const res = await fetch(`http://192.168.1.6:4000/reservations/${id}/cancel`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) loadReservations();
+  };
+
+
   if (loading) return <Typography>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
@@ -183,6 +196,9 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
                     <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>{localExceptions[r.id]}</Typography>
                   </>
                 )}
+                <Button variant="contained" color="warning" onClick={() => handleCancel(r.id)}>
+                  Cancelar
+                </Button>
               </CardContent>
             </Card>
           </Grid>
