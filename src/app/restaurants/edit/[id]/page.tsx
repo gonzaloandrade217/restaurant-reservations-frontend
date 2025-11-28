@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   Container,
+  MenuItem,
 } from "@mui/material";
 
 export default function EditRestaurantPage() {
@@ -21,9 +22,11 @@ export default function EditRestaurantPage() {
     description: "",
     capacity: 0,
     cantidadMesas: 0,
+    mesaTipo: "",
+    mesaCapacidad: 0,
   });
 
-  // CARGAR DATOS DEL RESTAURANTE 
+  // CARGAR DATOS DEL RESTAURANTE
   useEffect(() => {
     const loadData = async () => {
       const token = localStorage.getItem("authToken");
@@ -34,30 +37,35 @@ export default function EditRestaurantPage() {
 
       const data = await res.json();
 
-      // Me quedo solo con lo editable (NO tables)
       setRestaurant({
         name: data.name,
         address: data.address,
         phone: data.phone,
-        description: data.description,
-        capacity: data.capacity,
-        cantidadMesas: data.cantidadMesas,
+        description: data.description ?? "",
+        capacity: data.capacity ?? 0,
+        cantidadMesas: data.cantidadMesas ?? 0,
+        mesaTipo: data.mesaTipo ?? "",
+        mesaCapacidad: data.mesaCapacidad ?? 0,
       });
     };
 
     if (id) loadData();
   }, [id]);
 
-  // CAMBIO DE CAMPOS 
-  const handleChange = (e: any) => {
-    setRestaurant({ ...restaurant, [e.target.name]: e.target.value });
+  // CAMBIO DE CAMPOS
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
+
+    setRestaurant({
+      ...restaurant,
+      [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
+    });
   };
 
-  // GUARDAR CAMBIOS 
+  // GUARDAR CAMBIOS
   const handleSave = async () => {
     const token = localStorage.getItem("authToken");
 
-    // Solo mando lo editable (evito error por tables)
     const payload = {
       name: restaurant.name,
       address: restaurant.address,
@@ -65,6 +73,10 @@ export default function EditRestaurantPage() {
       description: restaurant.description,
       capacity: Number(restaurant.capacity),
       cantidadMesas: Number(restaurant.cantidadMesas),
+      mesaTipo: restaurant.mesaTipo || null,
+      mesaCapacidad: restaurant.mesaCapacidad
+        ? Number(restaurant.mesaCapacidad)
+        : null,
     };
 
     const res = await fetch(`http://192.168.1.6:4000/restaurants/${id}`, {
@@ -110,7 +122,7 @@ export default function EditRestaurantPage() {
         Editar Restaurante
       </Typography>
 
-      {/* CAMPOS */}
+      {/* CAMPOS PRINCIPALES */}
       {[
         { label: "Nombre", name: "name" },
         { label: "Dirección", name: "address" },
@@ -149,9 +161,9 @@ export default function EditRestaurantPage() {
         }}
       />
 
-      {/* CAPACIDAD */}
+      {/* CAPACIDAD TOTAL */}
       <TextField
-        label="Capacidad"
+        label="Capacidad total"
         type="number"
         name="capacity"
         value={restaurant.capacity}
@@ -165,12 +177,48 @@ export default function EditRestaurantPage() {
         }}
       />
 
-      {/* CANTIDAD MESAS */}
+      {/* CANTIDAD DE MESAS */}
       <TextField
         label="Cantidad de mesas"
         type="number"
         name="cantidadMesas"
         value={restaurant.cantidadMesas}
+        onChange={handleChange}
+        fullWidth
+        sx={{ mb: 2 }}
+        InputLabelProps={{ style: { color: "#fff" } }}
+        InputProps={{
+          style: { color: "#fff" },
+          sx: { "& fieldset": { borderColor: "white" } },
+        }}
+      />
+
+      {/* TIPO DE MESA */}
+      <TextField
+        select
+        label="Tipo de mesa"
+        name="mesaTipo"
+        value={restaurant.mesaTipo}
+        onChange={handleChange}
+        fullWidth
+        sx={{ mb: 2 }}
+        InputLabelProps={{ style: { color: "white" } }}
+        InputProps={{
+          style: { color: "white" },
+          sx: { "& fieldset": { borderColor: "white" } },
+        }}
+      >
+        <MenuItem value={"CUADRADA"}>Cuadrada</MenuItem>
+        <MenuItem value={"RECTANGULAR"}>Rectangular</MenuItem>
+        <MenuItem value={"REDONDA"}>Redonda</MenuItem>
+      </TextField>
+
+      {/* CAPACIDAD POR MESA */}
+      <TextField
+        label="Capacidad por mesa"
+        type="number"
+        name="mesaCapacidad"
+        value={restaurant.mesaCapacidad}
         onChange={handleChange}
         fullWidth
         sx={{ mb: 3 }}
@@ -191,7 +239,7 @@ export default function EditRestaurantPage() {
           color: "white",
           fontWeight: "bold",
           mb: 2,
-          ":hover": { bgcolor: "#9f68115" },
+          ":hover": { bgcolor: "#e86f00" },
         }}
       >
         Guardar Cambios
@@ -206,10 +254,10 @@ export default function EditRestaurantPage() {
           bgcolor: "#ff9800",
           color: "white",
           fontWeight: "bold",
-          ":hover": { bgcolor: "#9f68115" },
+          ":hover": { bgcolor: "#e86f00" },
         }}
       >
-        Volver al Dashboard
+        Volver 
       </Button>
     </Container>
   );

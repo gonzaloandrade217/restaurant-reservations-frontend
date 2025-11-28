@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { Box, Typography, Grid, Card, CardContent, Button, Container, Divider } from "@mui/material";
+import { Box, Typography, Grid, Card, CardContent, Button, Container, Divider, TextField } from "@mui/material";
 
 interface Reservation {
   id: string;
   date: string;
   partySize: number;
   restaurant: { name: string };
-  user: { name: string; email: string; };
+  user: { name: string; email: string };
+  exceptionDescription?: string; // opcional desde backend
 }
 
 interface AdminReservationsListProps {
@@ -21,6 +22,8 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
+
   const loadReservations = async () => {
     setLoading(true);
     setError(null);
@@ -28,37 +31,30 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     try {
       const token = localStorage.getItem("authToken");
       const adminId = localStorage.getItem("userId");
-
-      console.log("Admin ID desde localStorage:", adminId);
-
       if (!token || !adminId) throw new Error("No estás autenticado como admin.");
 
       // Pendientes
-      console.log("Token:", token, "Admin ID:", adminId);
       const pendingRes = await fetch(`http://192.168.1.6:4000/reservations/admin/pending/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!pendingRes.ok) {
-        throw new Error(`Error al cargar reservas pendientes: ${pendingRes.statusText}`);
-      }
-
+      if (!pendingRes.ok) throw new Error(`Error al cargar reservas pendientes: ${pendingRes.statusText}`);
       const pendingData: Reservation[] = await pendingRes.json();
-      console.log("Reservas pendientes recibidas:", pendingData);
       setPendingReservations(pendingData);
 
       // Aceptadas
       const acceptedRes = await fetch(`http://192.168.1.6:4000/reservations/admin/accepted/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!acceptedRes.ok) {
-        throw new Error(`Error al cargar reservas aceptadas: ${acceptedRes.statusText}`);
-      }
-
+      if (!acceptedRes.ok) throw new Error(`Error al cargar reservas aceptadas: ${acceptedRes.statusText}`);
       const acceptedData: Reservation[] = await acceptedRes.json();
-      console.log("Reservas aceptadas recibidas:", acceptedData);
       setAcceptedReservations(acceptedData);
+
+      // Inicializar localExceptions con lo que venga del backend
+      const exceptionsMap: { [id: string]: string } = {};
+      [...pendingData, ...acceptedData].forEach(r => {
+        if (r.exceptionDescription) exceptionsMap[r.id] = r.exceptionDescription;
+      });
+      setLocalExceptions(exceptionsMap);
 
     } catch (err: any) {
       console.error(err);
@@ -76,12 +72,31 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
+    // Primero, guardar la excepción en el backend si existe
+    if (localExceptions[id]) {
+      await fetch(`http://192.168.1.6:4000/reservations/${id}/exception`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ message: localExceptions[id] }),
+      });
+    }
+
     const res = await fetch(`http://192.168.1.6:4000/reservations/${id}/${action}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (res.ok) loadReservations();
+    if (res.ok) {
+      const updated = pendingReservations.find(r => r.id === id);
+      // Mover a aceptadas si es accept
+      if (action === "accept" && updated) {
+        setAcceptedReservations(prev => [...prev, updated]);
+      }
+      setPendingReservations(prev => prev.filter(r => r.id !== id));
+    }
   };
 
   if (loading) return <Typography>Cargando reservas...</Typography>;
@@ -113,6 +128,17 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
                 <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>
+
+                {/* Excepción */}
+                <TextField
+                  label="Excepción"
+                  placeholder="Ej: juntar 5 mesas para 20 personas"
+                  size="small"
+                  fullWidth
+                  sx={{ mb: 1 }}
+                  value={localExceptions[r.id] || ""}
+                  onChange={(e) => setLocalExceptions(prev => ({ ...prev, [r.id]: e.target.value }))}
+                />
 
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                   <Button variant="contained" color="success" onClick={() => handleAction(r.id, "accept")}>Aceptar</Button>
@@ -149,7 +175,14 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
                 <Typography variant="body2" sx={{ mb: 1 }}>{new Date(r.date).toLocaleString()}</Typography>
 
                 <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
-                <Typography variant="body2">{r.partySize}</Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>
+
+                {localExceptions[r.id] && (
+                  <>
+                    <Typography variant="subtitle2" color="text.secondary">Excepción:</Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>{localExceptions[r.id]}</Typography>
+                  </>
+                )}
               </CardContent>
             </Card>
           </Grid>

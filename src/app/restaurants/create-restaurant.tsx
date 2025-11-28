@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from "react";
-import { Box, TextField, Button, Typography } from "@mui/material";
+import { Box, TextField, Button, Typography, MenuItem } from "@mui/material";
 
 interface CreateRestaurantFormProps {
   onCreated?: () => void;
 }
+
+type MesaTipoOption = "CUADRADA" | "RECTANGULAR" | "REDONDA";
 
 export default function CreateRestaurantForm({ onCreated }: CreateRestaurantFormProps) {
   const [name, setName] = useState("");
@@ -14,6 +16,10 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [description, setDescription] = useState("");
   const [capacity, setCapacity] = useState<number | "">("");
   const [cantidadMesas, setCantidadMesas] = useState<number | "">("");
+
+  const [mesaCapacidad, setMesaCapacidad] = useState<number | "">("");
+  const [mesaTipo, setMesaTipo] = useState<MesaTipoOption | "">(""); // corregido
+
   const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +43,8 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           description,
           capacity: Number(capacity),
           cantidadMesas: Number(cantidadMesas),
+          mesaCapacidad: Number(mesaCapacidad),
+          mesaTipo: mesaTipo || undefined, // enviar undefined si no hay selección
         }),
       });
 
@@ -48,12 +56,15 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       const restaurantData = await response.json();
       setMessage(`Restaurante creado con éxito: ${restaurantData.name}`);
 
+      // Limpiar formulario
       setName("");
       setAddress("");
       setPhone("");
       setDescription("");
       setCapacity("");
       setCantidadMesas("");
+      setMesaCapacidad("");
+      setMesaTipo("");
 
       if (onCreated) onCreated();
     } catch (error: any) {
@@ -121,6 +132,13 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           onChange: (e: any) =>
             setCantidadMesas(e.target.value === "" ? "" : Number(e.target.value)),
         },
+        {
+          label: "Capacidad por Mesa",
+          value: mesaCapacidad,
+          type: "number",
+          onChange: (e: any) =>
+            setMesaCapacidad(e.target.value === "" ? "" : Number(e.target.value)),
+        },
       ].map((field, index) => (
         <TextField
           key={index}
@@ -143,6 +161,37 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         />
       ))}
 
+      {/* Select Tipo de Mesa */}
+      <TextField
+        select
+        label="Tipo de Mesa"
+        value={mesaTipo} 
+        onChange={(e) => setMesaTipo(e.target.value as MesaTipoOption)}
+        required
+        fullWidth
+        InputLabelProps={{ style: { color: "white" } }}
+        inputProps={{ style: { color: "white" } }}
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": { borderColor: "white" },
+            "&:hover fieldset": { borderColor: "white" },
+            "&.Mui-focused fieldset": { borderColor: "white" },
+            color: "white",
+          },
+          "& .MuiSelect-select": {
+          color: "white",
+          },
+          "& .MuiMenuItem-root": {
+          color: "black", 
+          },
+        }}
+      >
+        <MenuItem value="">Seleccione un tipo</MenuItem>
+        <MenuItem value="CUADRADA">Cuadrada</MenuItem>
+        <MenuItem value="RECTANGULAR">Rectangular</MenuItem>
+        <MenuItem value="REDONDA">Redonda</MenuItem>
+      </TextField>
+
       {/* Descripción */}
       <TextField
         label="Descripción (opcional)"
@@ -162,7 +211,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         }}
       />
 
-      {/* Botón naranja responsive */}
+      {/* Botón */}
       <Button
         type="submit"
         fullWidth
@@ -180,7 +229,6 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         Registrar
       </Button>
 
-      {/* Mensaje */}
       {message && (
         <Typography
           align="center"
