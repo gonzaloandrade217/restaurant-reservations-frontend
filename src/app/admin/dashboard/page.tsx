@@ -13,7 +13,7 @@ import {
   useMediaQuery,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -33,18 +33,36 @@ export default function AdminDashboardPage() {
   const [refreshUsers, setRefreshUsers] = useState(0);
   const [refreshReservations, setRefreshReservations] = useState(0);
 
-  const [section, setSection] = useState< "restaurantes" | "reservas" | "usuarios">("restaurantes");
+  const [section, setSection] = useState<"restaurantes" | "reservas" | "usuarios">("restaurantes");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [hasPending, setHasPending] = useState(false);
 
-  const handleRestaurantCreated = () => {
-    setRefreshRestaurants(prev => prev + 1);
+  const handleRestaurantCreated = () => setRefreshRestaurants(prev => prev + 1);
+
+  // ------------------ FETCH RESERVAS PENDIENTES ------------------
+  const fetchPendingReservations = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const adminId = localStorage.getItem("userId");
+      if (!token || !adminId) return;
+
+      const res = await fetch(`http://192.168.1.6:4000/reservations/admin/pending/${adminId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setHasPending(data.length > 0);
+    } catch (err) {
+      console.error("Error cargando reservas pendientes", err);
+    }
   };
 
   useEffect(() => {
-    if (section === "reservas") {
-      setRefreshReservations(prev => prev + 1);
-    }
-  }, [section]);
+    fetchPendingReservations();
+    const interval = setInterval(fetchPendingReservations, 5000); // chequea cada 5s
+    return () => clearInterval(interval);
+  }, [refreshReservations]);
 
   const tabValue =
     section === "restaurantes" ? 0 :
@@ -56,17 +74,12 @@ export default function AdminDashboardPage() {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(menuAnchor);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMenuAnchor(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-  };
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setMenuAnchor(event.currentTarget);
+  const handleMenuClose = () => setMenuAnchor(null);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
+    localStorage.removeItem("authToken");
+    window.location.href = "/";
   };
 
   const handleDeleteAccount = async () => {
@@ -74,7 +87,7 @@ export default function AdminDashboardPage() {
 
     try {
       const token = localStorage.getItem("authToken");
-      const userId = localStorage.getItem("userId"); // asumimos que guardaste el id del admin
+      const userId = localStorage.getItem("userId");
       if (!token || !userId) throw new Error("No estás autenticado.");
 
       const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
@@ -92,9 +105,9 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // ------------------------ RENDER ------------------------
   return (
     <Container sx={{ py: 4 }}>
-      {/* ---------------------- NAVBAR RESPONSIVE ---------------------- */}
       <Paper
         elevation={3}
         sx={{
@@ -134,16 +147,31 @@ export default function AdminDashboardPage() {
             TabIndicatorProps={{ style: { background: "white" } }}
             sx={{
               flex: 1,
-              "& .MuiTab-root": {
-                minWidth: "120px",
-                padding: "6px 10px",
-                fontSize: "0.85rem",
-                fontWeight: 600
-              }
+              "& .MuiTab-root": { minWidth: "120px", padding: "6px 10px", fontSize: "0.85rem", fontWeight: 600 }
             }}
           >
             <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-            <Tab icon={<BookOnlineIcon />} label="Reservas" />
+            <Tab
+              icon={
+                <Box sx={{ position: "relative", display: "inline-flex" }}>
+                  <BookOnlineIcon />
+                  {hasPending && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: -4,
+                        right: -4,
+                        width: 12,
+                        height: 12,
+                        bgcolor: "red",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </Box>
+              }
+              label="Reservas"
+            />
             <Tab icon={<PeopleIcon />} label="Usuarios" />
           </Tabs>
         )}
@@ -155,11 +183,27 @@ export default function AdminDashboardPage() {
         <Menu anchorEl={menuAnchor} open={openMenu} onClose={handleMenuClose}>
           {isMobile && [
             <MenuItem key="restaurantes" onClick={() => { setSection("restaurantes"); handleMenuClose(); }}>Restaurantes</MenuItem>,
-            <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>Reservas</MenuItem>,
+            <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>
+              <Box sx={{ position: "relative", display: "inline-flex" }}>
+                Reservas
+                {hasPending && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      right: -4,
+                      width: 12,
+                      height: 12,
+                      bgcolor: "red",
+                      borderRadius: "50%",
+                    }}
+                  />
+                )}
+              </Box>
+            </MenuItem>,
             <MenuItem key="usuarios" onClick={() => { setSection("usuarios"); handleMenuClose(); }}>Usuarios</MenuItem>,
             <Divider key="divider" sx={{ my: 1 }} />,
           ]}
-
           <MenuItem onClick={() => { handleMenuClose(); handleLogout(); }}>Cerrar sesión</MenuItem>
           <MenuItem onClick={() => { handleMenuClose(); handleDeleteAccount(); }} sx={{ color: "red" }}>
             Eliminar cuenta
@@ -167,59 +211,38 @@ export default function AdminDashboardPage() {
         </Menu>
       </Paper>
 
-      {/* ---------------------- SECCIÓN RESTAURANTES ---------------------- */}
+      {/* SECCIONES */}
       {section === "restaurantes" && (
         <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
-            Gestión de Restaurantes
-          </Typography>
-
+          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Gestión de Restaurantes</Typography>
           <Button
             variant="contained"
-            sx={{
-              mt: 2,
-              mb: 3,
-              backgroundColor: "#ff9800",
-              "&:hover": { backgroundColor: "#e67834" }
-            }}
+            sx={{ mt: 2, mb: 3, backgroundColor: "#ff9800", "&:hover": { backgroundColor: "#e67834" } }}
             onClick={() => setShowCreateForm(prev => !prev)}
           >
             {showCreateForm ? "Cerrar formulario" : "Crear restaurante"}
           </Button>
-
-          {showCreateForm && (
-            <Box sx={{ mb: 3 }}>
-              <CreateRestaurantForm onCreated={handleRestaurantCreated} />
-            </Box>
-          )}
-
+          {showCreateForm && <Box sx={{ mb: 3 }}><CreateRestaurantForm onCreated={handleRestaurantCreated} /></Box>}
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <RestaurantList refresh={refreshRestaurants} />
         </Box>
       )}
 
-      {/* ---------------------- SECCIÓN RESERVAS ---------------------- */}
       {section === "reservas" && (
         <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
-            Reservas
-          </Typography>
+          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Reservas</Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <AdminReservationsList refresh={refreshReservations} />
         </Box>
       )}
 
-      {/* ---------------------- SECCIÓN USUARIOS ---------------------- */}
       {section === "usuarios" && (
         <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>
-            Lista de Usuarios
-          </Typography>
+          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Lista de Usuarios</Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <UserList refresh={refreshUsers} />
         </Box>
       )}
-
     </Container>
   );
 }

@@ -9,7 +9,7 @@ interface Reservation {
   partySize: number;
   restaurant: { name: string };
   user: { name: string; email: string };
-  exceptionDescription?: string; // opcional desde backend
+  exceptionDescription?: string; 
 }
 
 interface AdminReservationsListProps {

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from "react";
 import {
@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -64,7 +64,7 @@ export default function UsersDashboardPage() {
 
       alert("Usuario eliminado correctamente.");
       localStorage.clear();
-      window.location.href = "/";
+      router.push("/");
     } catch (err: any) {
       alert(err.message);
     }
@@ -80,6 +80,10 @@ export default function UsersDashboardPage() {
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
 
+  // Notificaciones
+  const [newNotification, setNewNotification] = useState(false);
+
+  // -------------------- FETCH RESTAURANTES --------------------
   useEffect(() => {
     if (section !== "restaurantes") return;
 
@@ -105,8 +109,9 @@ export default function UsersDashboardPage() {
     fetchRestaurants();
   }, [section]);
 
+  // -------------------- FETCH RESERVAS Y NOTIFICACIONES --------------------
   useEffect(() => {
-    if (section !== "reservas") return;
+    let previousReservations: any[] = [];
 
     const fetchReservations = async () => {
       try {
@@ -114,14 +119,25 @@ export default function UsersDashboardPage() {
         const userId = localStorage.getItem("userId");
         if (!token || !userId) throw new Error("Sesión inválida.");
 
-        const res = await fetch(
-          `http://192.168.1.6:4000/reservations/user/${userId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await fetch(`http://192.168.1.6:4000/reservations/user/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!res.ok) throw new Error("Error al obtener reservas");
 
-        setReservations(await res.json());
+        const data: any[] = await res.json();
+
+        // Detectar cambios de estado
+        const hasStateChanged = data.some(r => {
+          const prev = previousReservations.find(pr => pr.id === r.id);
+          return prev && prev.status !== r.status;
+        });
+
+        if (hasStateChanged && section !== "reservas") setNewNotification(true);
+        if (section === "reservas") setNewNotification(false);
+
+        setReservations(data);
+        previousReservations = data;
       } catch (err: any) {
         setReservationsError(err.message);
       } finally {
@@ -130,6 +146,8 @@ export default function UsersDashboardPage() {
     };
 
     fetchReservations();
+    const interval = setInterval(fetchReservations, 5000); // recarga automática
+    return () => clearInterval(interval);
   }, [section]);
 
   const handleReserveClick = (restaurantId: string) => {
@@ -150,12 +168,14 @@ export default function UsersDashboardPage() {
   const translateStatus = (status: string) => {
     if (status === "ACCEPTED") return "Aceptada";
     if (status === "REJECTED") return "Rechazada";
+    if (status === "CANCELLED") return "Cancelada";
     return "Pendiente";
   };
 
   const statusColor = (status: string) => {
     if (status === "ACCEPTED") return "green";
     if (status === "REJECTED") return "red";
+    if (status === "CANCELLED") return "gray";
     return "orange";
   };
 
@@ -163,7 +183,7 @@ export default function UsersDashboardPage() {
 
   return (
     <Container sx={{ py: 4, pb: isMobile ? 10 : 4 }}>
-
+      {/* -------------------- NAVBAR -------------------- */}
       <Paper
         elevation={3}
         sx={{
@@ -176,7 +196,6 @@ export default function UsersDashboardPage() {
           borderRadius: 2,
         }}
       >
-        {/* Título */}
         <Typography
           sx={{
             fontFamily: "'Playfair Display', serif",
@@ -189,7 +208,6 @@ export default function UsersDashboardPage() {
           MesaSegura
         </Typography>
 
-        {/* DESKTOP: TABS PEGADOS AL TÍTULO */}
         {!isMobile && (
           <Tabs
             value={tabValue}
@@ -205,13 +223,32 @@ export default function UsersDashboardPage() {
             }}
           >
             <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-            <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+            <Tab
+              icon={<BookOnlineIcon />}
+              label={
+                <Box sx={{ position: "relative", display: "inline-flex" }}>
+                  Mis Reservas
+                  {newNotification && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: -6,
+                        right: -12,
+                        width: 12,
+                        height: 12,
+                        bgcolor: "red",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </Box>
+              }
+            />
           </Tabs>
         )}
 
         <Box sx={{ flexGrow: 1 }} />
 
-        {/* HAMBURGUESA */}
         <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
           <MenuIcon />
         </IconButton>
@@ -224,7 +261,7 @@ export default function UsersDashboardPage() {
         </Menu>
       </Paper>
 
-      {/* CONTENIDO */}
+      {/* -------------------- SECCIÓN RESTAURANTES -------------------- */}
       {section === "restaurantes" && (
         <Box sx={{ mb: 12 }}>
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
@@ -281,6 +318,7 @@ export default function UsersDashboardPage() {
         </Box>
       )}
 
+      {/* -------------------- SECCIÓN RESERVAS -------------------- */}
       {section === "reservas" && (
         <Box sx={{ mb: 12 }}>
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
@@ -294,7 +332,7 @@ export default function UsersDashboardPage() {
 
           {!reservationsLoading && (
             <Box display="grid" gap={2}>
-              {reservations.map((r: any) => (
+              {reservations.map((r) => (
                 <Card key={r.id} sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2 }}>
                   <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
                   <Typography>Fecha: {formatDate(r.date)}</Typography>
@@ -315,7 +353,7 @@ export default function UsersDashboardPage() {
         </Box>
       )}
 
-      {/* MOBILE: TABS ABAJO */}
+      {/* -------------------- MOBILE TABS -------------------- */}
       {isMobile && (
         <Paper
           elevation={3}
@@ -339,11 +377,30 @@ export default function UsersDashboardPage() {
             variant="fullWidth"
           >
             <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-            <Tab icon={<BookOnlineIcon />} label="Mis Reservas" />
+            <Tab
+              icon={<BookOnlineIcon />}
+              label={
+                <Box sx={{ position: "relative", display: "inline-flex" }}>
+                  Mis Reservas
+                  {newNotification && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: -6,
+                        right: -12,
+                        width: 12,
+                        height: 12,
+                        bgcolor: "red",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  )}
+                </Box>
+              }
+            />
           </Tabs>
         </Paper>
       )}
-
     </Container>
   );
 }
