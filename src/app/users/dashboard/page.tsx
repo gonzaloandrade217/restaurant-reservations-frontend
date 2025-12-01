@@ -437,7 +437,7 @@ export default function UsersDashboardPage() {
                     {(r.status === "PENDING" || r.status === "ACCEPTED") && (
                       <Button
                         variant="contained"
-                        sx={{ mt: 2, backgroundColor: "red" }}
+                        sx={{ mt: 2, backgroundColor: "#ff9800" }}
                         fullWidth
                         onClick={() => cancelReservation(r.id)}
                       >

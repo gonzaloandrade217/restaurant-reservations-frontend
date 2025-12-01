@@ -9,7 +9,7 @@ interface Reservation {
   partySize: number;
   restaurant: { name: string };
   user: { name: string; email: string };
-  exceptionDescription?: string; 
+  exceptionDescription?: string;
 }
 
 interface AdminReservationsListProps {
@@ -23,6 +23,9 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   const [error, setError] = useState<string | null>(null);
 
   const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
+
+  // 🔎 NUEVO: BUSQUEDA POR FECHA
+  const [searchDate, setSearchDate] = useState("");
 
   const loadReservations = async () => {
     setLoading(true);
@@ -49,7 +52,7 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
       const acceptedData: Reservation[] = await acceptedRes.json();
       setAcceptedReservations(acceptedData);
 
-      // Inicializar localExceptions con lo que venga del backend
+      // Inicializar excepciones locales
       const exceptionsMap: { [id: string]: string } = {};
       [...pendingData, ...acceptedData].forEach(r => {
         if (r.exceptionDescription) exceptionsMap[r.id] = r.exceptionDescription;
@@ -72,13 +75,12 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
-    // Primero, guardar la excepción en el backend si existe
     if (localExceptions[id]) {
       await fetch(`http://192.168.1.6:4000/reservations/${id}/exception`, {
         method: "PATCH",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ message: localExceptions[id] }),
       });
@@ -91,7 +93,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
     if (res.ok) {
       const updated = pendingReservations.find(r => r.id === id);
-      // Mover a aceptadas si es accept
       if (action === "accept" && updated) {
         setAcceptedReservations(prev => [...prev, updated]);
       }
@@ -111,19 +112,43 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     if (res.ok) loadReservations();
   };
 
-
   if (loading) return <Typography>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
+  // APLICAR FILTRO POR FECHA
+  const filteredPending = searchDate
+    ? pendingReservations.filter(r => r.date.startsWith(searchDate))
+    : pendingReservations;
+
+  const filteredAccepted = searchDate
+    ? acceptedReservations.filter(r => r.date.startsWith(searchDate))
+    : acceptedReservations;
+
   return (
     <Container sx={{ mt: 4 }}>
+
+      {/* Buscador de fecha */}
+      <Box sx={{ mb: 4 }}>
+        <TextField
+          type="date"
+          value={searchDate}
+          onChange={(e) => setSearchDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 2
+          }}
+        />
+      </Box>
+
       {/* RESERVAS PENDIENTES */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Pendientes</Typography>
       <Grid container spacing={2} sx={{ mb: 6 }}>
-        {pendingReservations.length === 0 && (
+        {filteredPending.length === 0 && (
           <Typography sx={{ ml: 2 }}>No hay reservas pendientes</Typography>
         )}
-        {pendingReservations.map((r) => (
+        {filteredPending.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
             <Card sx={{ borderRadius: 2, p: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: '0.2s', ':hover': { transform: 'scale(1.02)' } }}>
               <CardContent>
@@ -142,10 +167,9 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
                 <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>
 
-                {/* Excepción */}
                 <TextField
                   label="Excepción"
-                  placeholder="Ej: juntar 5 mesas para 20 personas"
+                  placeholder="Ej: juntar 5 mesas"
                   size="small"
                   fullWidth
                   sx={{ mb: 1 }}
@@ -168,10 +192,10 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
       {/* RESERVAS ACEPTADAS */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Aceptadas</Typography>
       <Grid container spacing={2}>
-        {acceptedReservations.length === 0 && (
+        {filteredAccepted.length === 0 && (
           <Typography sx={{ ml: 2 }}>No hay reservas aceptadas</Typography>
         )}
-        {acceptedReservations.map((r) => (
+        {filteredAccepted.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
             <Card sx={{ borderRadius: 2, p: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: '0.2s', ':hover': { transform: 'scale(1.02)' } }}>
               <CardContent>
@@ -196,6 +220,7 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
                     <Typography variant="body2" sx={{ mb: 1, fontStyle: 'italic' }}>{localExceptions[r.id]}</Typography>
                   </>
                 )}
+
                 <Button variant="contained" color="warning" onClick={() => handleCancel(r.id)}>
                   Cancelar
                 </Button>
