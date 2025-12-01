@@ -86,11 +86,21 @@ export default function UsersDashboardPage() {
   const [newNotification, setNewNotification] = useState(false);
 
   // LISTA DE RESERVAS QUE EL USUARIO ELIGIÓ OCULTAR
-  const [hiddenReservations, setHiddenReservations] = useState<string[]>([]);
+  const [hiddenReservations, setHiddenReservations] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("hiddenReservations") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   // FUNCIÓN PARA OCULTAR UNA RESERVA RECHAZADA / CANCELADA
   const hideReservation = (id: string) => {
-    setHiddenReservations(prev => [...prev, id]);
+    setHiddenReservations(prev => {
+      const updated = [...prev, id];
+      localStorage.setItem("hiddenReservations", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // -------------------- FETCH RESTAURANTES --------------------
@@ -159,6 +169,10 @@ export default function UsersDashboardPage() {
 
     return () => clearInterval(interval);
   }, [section]);
+
+  useEffect(() => {
+    localStorage.setItem("hiddenReservations", JSON.stringify(hiddenReservations));
+  }, [hiddenReservations]);
 
   const handleReserveClick = (restaurantId: string) => {
     router.push(`/reservations/select-seats?restaurant=${restaurantId}`);
