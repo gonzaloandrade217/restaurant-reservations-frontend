@@ -17,6 +17,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  TextField
 } from "@mui/material";
 
 import CloseIcon from "@mui/icons-material/Close";
@@ -31,6 +32,8 @@ interface Restaurant {
   name: string;
   description: string;
   image?: string;
+  city?: string; 
+  address?: string;
 }
 
 const API = "http://192.168.1.6:4000";
@@ -84,8 +87,6 @@ export default function UsersDashboardPage() {
   const [reservationsError, setReservationsError] = useState<string | null>(null);
 
   const [newNotification, setNewNotification] = useState(false);
-
-  // LISTA DE RESERVAS QUE EL USUARIO ELIGIÓ OCULTAR
   const [hiddenReservations, setHiddenReservations] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem("hiddenReservations") || "[]");
@@ -94,7 +95,6 @@ export default function UsersDashboardPage() {
     }
   });
 
-  // FUNCIÓN PARA OCULTAR UNA RESERVA RECHAZADA / CANCELADA
   const hideReservation = (id: string) => {
     setHiddenReservations(prev => {
       const updated = [...prev, id];
@@ -102,6 +102,8 @@ export default function UsersDashboardPage() {
       return updated;
     });
   };
+
+  const [search, setSearch] = useState("");
 
   // -------------------- FETCH RESTAURANTES --------------------
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function UsersDashboardPage() {
     fetchRestaurants();
   }, [section]);
 
-  // -------------------- FETCH RESERVAS + NOTIFICACIONES --------------------
+  // -------------------- FETCH RESERVAS --------------------
   useEffect(() => {
     let previousReservations: any[] = [];
 
@@ -166,7 +168,6 @@ export default function UsersDashboardPage() {
 
     fetchReservations();
     const interval = setInterval(fetchReservations, 5000);
-
     return () => clearInterval(interval);
   }, [section]);
 
@@ -228,6 +229,12 @@ export default function UsersDashboardPage() {
       alert(err.message);
     }
   };
+
+  // ---------------- FILTRO DE BUSQUEDA ----------------
+  const filteredRestaurants = restaurants.filter(r =>
+    (r.name?.toLowerCase() || "").includes(search.toLowerCase()) ||
+    (r.city?.toLowerCase() || "").includes(search.toLowerCase()) // 🔥 búsqueda por ciudad
+  );
 
   return (
     <Container sx={{ py: 4, pb: isMobile ? 10 : 4 }}>
@@ -310,6 +317,19 @@ export default function UsersDashboardPage() {
           </Typography>
           <Divider sx={{ borderColor: "white", mb: 3 }} />
 
+          {/* BUSCADOR */}
+          <TextField
+            fullWidth
+            placeholder="Buscar por nombre o ciudad..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{
+              mb: 3,
+              backgroundColor: "white",
+              borderRadius: 1,
+            }}
+          />
+
           {loading ? (
             <Typography sx={{ color: "white" }}>Cargando restaurantes...</Typography>
           ) : error ? (
@@ -324,7 +344,7 @@ export default function UsersDashboardPage() {
               }}
               gap={3}
             >
-              {restaurants.map((restaurant) => (
+              {filteredRestaurants.map((restaurant) => (
                 <Card
                   key={restaurant.id}
                   sx={{ backgroundColor: "#111", color: "white", border: "1px solid white" }}
@@ -342,6 +362,18 @@ export default function UsersDashboardPage() {
                     <Typography variant="body2" sx={{ opacity: 0.8 }}>
                       {restaurant.description}
                     </Typography>
+
+                    {restaurant.city && (
+                      <Typography sx={{ mt: 1, opacity: 0.7 }}>
+                        Ciudad: {restaurant.city}
+                      </Typography>
+                    )}
+
+                    {restaurant.address && (
+                      <Typography sx={{ mt: 1, opacity: 0.7 }}>
+                        Dirección: {restaurant.address}
+                      </Typography>
+                    )}
 
                     <Button
                       variant="contained"
@@ -373,13 +405,18 @@ export default function UsersDashboardPage() {
           {!reservationsLoading && (
             <Box display="grid" gap={2}>
               {reservations
-                .filter(r => !hiddenReservations.includes(r.id)) // 🔥 OCULTA LAS ELIMINADAS
+                .filter(r => !hiddenReservations.includes(r.id))
                 .map((r) => (
                   <Card
                     key={r.id}
-                    sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2, position: "relative" }}
+                    sx={{
+                      backgroundColor: "#111",
+                      color: "white",
+                      border: "1px solid white",
+                      p: 2,
+                      position: "relative"
+                    }}
                   >
-                    {/* ❌ SOLO SI ESTÁ RECHAZADA O CANCELADA */}
                     {(r.status === "REJECTED" || r.status === "CANCELLED") && (
                       <IconButton
                         onClick={() => hideReservation(r.id)}

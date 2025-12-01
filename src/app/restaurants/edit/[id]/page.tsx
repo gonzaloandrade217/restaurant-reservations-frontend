@@ -17,6 +17,7 @@ export default function EditRestaurantPage() {
 
   const [restaurant, setRestaurant] = useState({
     name: "",
+    city: "",
     address: "",
     phone: "",
     description: "",
@@ -39,6 +40,7 @@ export default function EditRestaurantPage() {
 
       setRestaurant({
         name: data.name,
+        city: data.city,
         address: data.address,
         phone: data.phone,
         description: data.description ?? "",
@@ -68,6 +70,7 @@ export default function EditRestaurantPage() {
 
     const payload = {
       name: restaurant.name,
+      city: restaurant.city,
       address: restaurant.address,
       phone: restaurant.phone,
       description: restaurant.description,
@@ -125,6 +128,7 @@ export default function EditRestaurantPage() {
       {/* CAMPOS PRINCIPALES */}
       {[
         { label: "Nombre", name: "name" },
+        { label: "Ciudad", name: "city" },
         { label: "Dirección", name: "address" },
         { label: "Teléfono", name: "phone" },
       ].map((field) => (

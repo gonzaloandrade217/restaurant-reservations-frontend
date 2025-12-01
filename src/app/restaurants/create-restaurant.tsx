@@ -11,6 +11,7 @@ type MesaTipoOption = "CUADRADA" | "RECTANGULAR" | "REDONDA";
 
 export default function CreateRestaurantForm({ onCreated }: CreateRestaurantFormProps) {
   const [name, setName] = useState("");
+  const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
@@ -18,7 +19,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [cantidadMesas, setCantidadMesas] = useState<number | "">("");
 
   const [mesaCapacidad, setMesaCapacidad] = useState<number | "">("");
-  const [mesaTipo, setMesaTipo] = useState<MesaTipoOption | "">(""); // corregido
+  const [mesaTipo, setMesaTipo] = useState<MesaTipoOption | "">(""); 
 
   const [message, setMessage] = useState("");
 
@@ -38,13 +39,14 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         },
         body: JSON.stringify({
           name,
+          city,
           address,
           phone,
           description,
           capacity: Number(capacity),
           cantidadMesas: Number(cantidadMesas),
           mesaCapacidad: Number(mesaCapacidad),
-          mesaTipo: mesaTipo || undefined, // enviar undefined si no hay selección
+          mesaTipo: mesaTipo || undefined, 
         }),
       });
 
@@ -58,6 +60,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
 
       // Limpiar formulario
       setName("");
+      setCity("");
       setAddress("");
       setPhone("");
       setDescription("");
@@ -107,6 +110,11 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           label: "Nombre",
           value: name,
           onChange: (e: any) => setName(e.target.value),
+        },
+        {
+          label: "Ciudad",
+          value: city,
+          onChange: (e: any) => setCity(e.target.value),
         },
         {
           label: "Dirección",
