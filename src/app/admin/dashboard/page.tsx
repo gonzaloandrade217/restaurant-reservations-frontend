@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
                         right: -4,
                         width: 12,
                         height: 12,
-                        bgcolor: "red",
+                        bgcolor: "purple",
                         borderRadius: "50%",
                       }}
                     />
@@ -194,7 +194,7 @@ export default function AdminDashboardPage() {
                       right: -4,
                       width: 12,
                       height: 12,
-                      bgcolor: "red",
+                      bgcolor: "blue",
                       borderRadius: "50%",
                     }}
                   />

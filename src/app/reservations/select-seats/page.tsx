@@ -107,7 +107,7 @@ export default function SelectSeatsPage() {
 
       if (res.ok) {
         setMessage(' Reserva enviada. El admin la revisará.');
-        setTimeout(() => router.push('/users/dashboard'), 1000);
+        setTimeout(() => router.push('/users/pages'), 1000);
       } else {
         const text = await res.text().catch(() => null);
         let errMsg = text || `Error ${res.status}`;
@@ -143,7 +143,7 @@ export default function SelectSeatsPage() {
 
       {/* BOTÓN VOLVER AL INICIO */}
       <Button
-        onClick={() => router.push('/users/dashboard')}
+        onClick={() => router.push('/users/pages')}
         variant="contained"
         sx={{ backgroundColor: '#ff9800', color: 'white', fontWeight: 'bold' }}
       >

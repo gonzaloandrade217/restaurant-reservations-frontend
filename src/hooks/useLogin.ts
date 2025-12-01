@@ -15,7 +15,7 @@ export const useLoginHandler = () => {
     login(access_token, userRole);
 
     if (userRole === "ADMIN") router.push("/admin/dashboard");
-    else router.push("/users/dashboard");
+    else router.push("/users/pages");
   };
 
   return { handleLogin };
