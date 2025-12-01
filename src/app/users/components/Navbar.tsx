@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from "react";
-import { Paper, Tabs, Tab, Typography, Box, IconButton, Menu, MenuItem } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
+import React, { useState, useEffect } from "react";
+import { Paper, Tabs, Tab, Typography, Box, IconButton, Menu, MenuItem, Avatar } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import { useRouter } from "next/navigation";
@@ -20,7 +19,17 @@ export default function Navbar({ section, setSection, newNotification = false }:
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
 
-  const handleMenuOpen = (event: any) => setAnchorEl(event.currentTarget);
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("Usuario");
+
+  useEffect(() => {
+    const avatar = localStorage.getItem("userPhoto");
+    const name = localStorage.getItem("userName");
+    if (avatar) setUserPhoto(avatar);
+    if (name) setUserName(name);
+  }, []);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
   const logout = () => {
@@ -84,19 +93,23 @@ export default function Navbar({ section, setSection, newNotification = false }:
           onChange={(e, v) => setSection(v === 0 ? "restaurantes" : "reservas")}
           textColor="inherit"
           TabIndicatorProps={{ style: { background: "white" } }}
+          sx={{ marginLeft: 2 }}
         >
-          <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
           <Tab
-            icon={<BookOnlineIcon />}
-            label={
+            icon={<RestaurantMenuIcon />}
+            label="Restaurantes"
+            iconPosition="top"
+          />
+          <Tab
+            icon={
               <Box sx={{ position: "relative", display: "inline-flex" }}>
-                Mis Reservas
+                <BookOnlineIcon />
                 {newNotification && (
                   <Box
                     sx={{
                       position: "absolute",
                       top: -6,
-                      right: -12,
+                      right: -6,
                       width: 12,
                       height: 12,
                       bgcolor: "blue",
@@ -106,16 +119,23 @@ export default function Navbar({ section, setSection, newNotification = false }:
                 )}
               </Box>
             }
+            label="Mis Reservas"
+            iconPosition="top"
           />
         </Tabs>
       )}
 
       <Box sx={{ flexGrow: 1 }} />
-      <IconButton onClick={handleMenuOpen} sx={{ color: "white" }}>
-        <MenuIcon />
+
+      <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
+        <Avatar
+          src={userPhoto || undefined}
+          sx={{ width: 36, height: 36, bgcolor: userPhoto ? undefined : "gray" }}
+        />
       </IconButton>
 
       <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
+        <MenuItem sx={{ pointerEvents: 'none', color: 'black', fontWeight: 'bold' }}>{userName}</MenuItem>
         <MenuItem onClick={logout}>Cerrar sesión</MenuItem>
         <MenuItem onClick={deleteAccount} sx={{ color: "red" }}>
           Eliminar cuenta

@@ -12,7 +12,7 @@ export const loginWithGoogle = async () => {
       uid: user.uid,
       email: user.email,
       name: user.displayName,
-      photo: user.photoURL,
+      avatar: user.photoURL,
       token: await user.getIdToken(),
     };
   } catch (err) {

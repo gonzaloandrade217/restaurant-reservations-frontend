@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { Container, Paper, Tabs, Tab, Box, TextField } from "@mui/material";
+import { Container, Paper, Box, TextField, Tabs, Tab } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import { useMediaQuery } from "@mui/material";
@@ -36,16 +36,13 @@ export default function UsersDashboardPage() {
 
       const latestReservations = await res.json();
 
-      // Detecta cambios de estado
-      const hasStateChanged = latestReservations.some((r: { id: any; status: any; }) => {
+      const hasStateChanged = latestReservations.some((r: { id: any; status: any }) => {
         const prev = previousReservations.find(p => p.id === r.id);
         return prev && prev.status !== r.status;
       });
 
-      // Mostrar notificación si hubo cambio y no estamos en "reservas"
       if (hasStateChanged && section !== "reservas") setNewNotification(true);
 
-      // Actualizamos previas
       setPreviousReservations(latestReservations);
     } catch (err) {
       console.error("Error cargando reservas del user", err);
@@ -54,68 +51,40 @@ export default function UsersDashboardPage() {
 
   useEffect(() => {
     fetchUserReservations();
-    const interval = setInterval(fetchUserReservations, 5000); // cada 5s
+    const interval = setInterval(fetchUserReservations, 5000);
     return () => clearInterval(interval);
   }, [section, previousReservations]);
 
-  // ------------------ HANDLER DE SECTION ------------------
   const handleSectionChange = (newSection: "restaurantes" | "reservas") => {
     setSection(newSection);
     if (newSection === "reservas") setNewNotification(false);
   };
 
   return (
-    <Container sx={{ py: 4, pb: isMobile ? 10 : 4 }}>
+    <Container sx={{ py: 4, pb: isMobile ? 12 : 4 }}>
       <Navbar section={section} setSection={handleSectionChange} newNotification={newNotification} />
 
-      {!isMobile && (
-        <Box sx={{ mb: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          <Tabs
-            value={tabValue}
-            onChange={(e, newValue) => handleSectionChange(newValue === 0 ? "restaurantes" : "reservas")}
-            textColor="inherit"
-            TabIndicatorProps={{ style: { background: "white" } }}
-          >
-            <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
-            <Tab
-              icon={
-                <Box sx={{ position: "relative", display: "inline-flex" }}>
-                  <BookOnlineIcon />
-                  {newNotification && (
-                    <Box
-                      sx={{
-                        position: "absolute",
-                        top: -6,
-                        right: -12,
-                        width: 12,
-                        height: 12,
-                        bgcolor: "green",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  )}
-                </Box>
-              }
-              label="Mis Reservas"
-            />
-          </Tabs>
-
-          {section === "restaurantes" && (
+      {/* ----- Contenido principal ----- */}
+      {section === "restaurantes" && (
+        <>
+          {/* Buscador sobre la lista de restaurantes */}
+          <Box sx={{ mb: 2, maxWidth: 400 }}>
             <TextField
               placeholder="Buscar restaurante por nombre o ciudad"
               variant="outlined"
               size="small"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              sx={{ maxWidth: 400, backgroundColor: "white", borderRadius: 1 }}
+              sx={{ width: "100%", backgroundColor: "white", borderRadius: 1 }}
             />
-          )}
-        </Box>
+          </Box>
+          <RestaurantsSection search={search} />
+        </>
       )}
 
-      {section === "restaurantes" && <RestaurantsSection search={search} />}
       {section === "reservas" && <ReservationsSection />}
 
+      {/* ----- Mobile Tabs ----- */}
       {isMobile && (
         <Paper
           elevation={3}

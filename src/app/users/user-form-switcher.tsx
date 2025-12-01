@@ -29,10 +29,19 @@ export default function UserFormSwitcher() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState("");
 
-  const handleLogin = (access_token: string, userRole: Role, userId: string) => {
+  const handleLogin = (
+    access_token: string,
+    userRole: Role,
+    userId: string,
+    userName?: string,
+    userPhoto?: string
+  ) => {
     localStorage.setItem("authToken", access_token);
     localStorage.setItem("userRole", userRole);
     localStorage.setItem("userId", userId);
+
+    if (userName) localStorage.setItem("userName", userName);
+    if (userPhoto) localStorage.setItem("userPhoto", userPhoto);
 
     login(access_token, userRole);
 
@@ -45,6 +54,7 @@ export default function UserFormSwitcher() {
     setMessage("");
 
     if (isLogin) {
+      // Login normal
       try {
         const res = await fetch("http://192.168.1.6:4000/users/login", {
           method: "POST",
@@ -55,7 +65,13 @@ export default function UserFormSwitcher() {
         if (!res.ok) throw new Error("Credenciales inválidas");
 
         const data = await res.json();
-        handleLogin(data.access_token, data.user.role as Role, data.user.id);
+        handleLogin(
+          data.access_token,
+          data.user.role as Role,
+          data.user.id,
+          data.user.name,
+          data.user.avatar
+        );
 
         setMessage("Login exitoso!");
         setEmail("");
@@ -66,6 +82,7 @@ export default function UserFormSwitcher() {
       return;
     }
 
+    // Registro nuevo usuario
     const userData = {
       name,
       email,
@@ -91,7 +108,13 @@ export default function UserFormSwitcher() {
       }
 
       const createdUser = await response.json();
-      handleLogin(createdUser.access_token, createdUser.role as Role, createdUser.id);
+      handleLogin(
+        createdUser.access_token,
+        createdUser.role as Role,
+        createdUser.id,
+        createdUser.name,
+        createdUser.avatar
+      );
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
     }
@@ -119,7 +142,13 @@ export default function UserFormSwitcher() {
       }
 
       const data = await res.json();
-      handleLogin(data.access_token, data.user.role as Role, data.user.id);
+      handleLogin(
+        data.access_token,
+        data.user.role as Role,
+        data.user.id,
+        data.user.name,
+        data.user.avatar
+      );
     } catch (error: any) {
       console.error("Error al enviar token al backend:", error.message);
     }
@@ -240,16 +269,16 @@ export default function UserFormSwitcher() {
         <Typography
           align="center"
           sx={{
-            color: message.includes("éxito") || message.includes("Login")
-              ? "success.main"
-              : "error.main",
+            color:
+              message.includes("éxito") || message.includes("Login")
+                ? "success.main"
+                : "error.main",
           }}
         >
           {message}
         </Typography>
       )}
 
-      {/* BOTÓN NARANJA */}
       <Button
         type="submit"
         fullWidth
@@ -268,7 +297,6 @@ export default function UserFormSwitcher() {
         {isLogin ? "Iniciar sesión" : "Registrar"}
       </Button>
 
-      {/* Alternar */}
       <Button
         variant="text"
         sx={{
@@ -284,7 +312,6 @@ export default function UserFormSwitcher() {
         {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciar sesión"}
       </Button>
 
-      {/* GOOGLE BUTTON */}
       <div
         id="googleSignInDiv"
         style={{
