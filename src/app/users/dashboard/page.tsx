@@ -19,6 +19,7 @@ import {
   MenuItem,
 } from "@mui/material";
 
+import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
@@ -31,6 +32,8 @@ interface Restaurant {
   description: string;
   image?: string;
 }
+
+const API = "http://192.168.1.6:4000";
 
 export default function UsersDashboardPage() {
   const isMobile = useMediaQuery("(max-width: 600px)");
@@ -48,21 +51,21 @@ export default function UsersDashboardPage() {
   };
 
   const deleteAccount = async () => {
-    if (!confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) return;
+    if (!confirm("¿Seguro que querés eliminar tu cuenta? Esta acción es permanente.")) return;
 
     try {
       const token = localStorage.getItem("authToken");
       const userId = localStorage.getItem("userId");
       if (!token || !userId) throw new Error("No estás autenticado.");
 
-      const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
+      const res = await fetch(`${API}/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Error al eliminar usuario");
 
-      alert("Usuario eliminado correctamente.");
+      alert("Usuario eliminado.");
       localStorage.clear();
       router.push("/");
     } catch (err: any) {
@@ -80,8 +83,15 @@ export default function UsersDashboardPage() {
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [reservationsError, setReservationsError] = useState<string | null>(null);
 
-  // Notificaciones
   const [newNotification, setNewNotification] = useState(false);
+
+  // LISTA DE RESERVAS QUE EL USUARIO ELIGIÓ OCULTAR
+  const [hiddenReservations, setHiddenReservations] = useState<string[]>([]);
+
+  // FUNCIÓN PARA OCULTAR UNA RESERVA RECHAZADA / CANCELADA
+  const hideReservation = (id: string) => {
+    setHiddenReservations(prev => [...prev, id]);
+  };
 
   // -------------------- FETCH RESTAURANTES --------------------
   useEffect(() => {
@@ -90,9 +100,9 @@ export default function UsersDashboardPage() {
     const fetchRestaurants = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        if (!token) throw new Error("No se encontró token.");
+        if (!token) throw new Error("No token.");
 
-        const res = await fetch("http://192.168.1.6:4000/restaurants", {
+        const res = await fetch(`${API}/restaurants`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -109,7 +119,7 @@ export default function UsersDashboardPage() {
     fetchRestaurants();
   }, [section]);
 
-  // -------------------- FETCH RESERVAS Y NOTIFICACIONES --------------------
+  // -------------------- FETCH RESERVAS + NOTIFICACIONES --------------------
   useEffect(() => {
     let previousReservations: any[] = [];
 
@@ -119,7 +129,7 @@ export default function UsersDashboardPage() {
         const userId = localStorage.getItem("userId");
         if (!token || !userId) throw new Error("Sesión inválida.");
 
-        const res = await fetch(`http://192.168.1.6:4000/reservations/user/${userId}`, {
+        const res = await fetch(`${API}/reservations/user/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -127,9 +137,8 @@ export default function UsersDashboardPage() {
 
         const data: any[] = await res.json();
 
-        // Detectar cambios de estado
         const hasStateChanged = data.some(r => {
-          const prev = previousReservations.find(pr => pr.id === r.id);
+          const prev = previousReservations.find(p => p.id === r.id);
           return prev && prev.status !== r.status;
         });
 
@@ -146,7 +155,8 @@ export default function UsersDashboardPage() {
     };
 
     fetchReservations();
-    const interval = setInterval(fetchReservations, 5000); // recarga automática
+    const interval = setInterval(fetchReservations, 5000);
+
     return () => clearInterval(interval);
   }, [section]);
 
@@ -181,9 +191,33 @@ export default function UsersDashboardPage() {
 
   const tabValue = section === "restaurantes" ? 0 : 1;
 
+  const cancelReservation = async (reservationId: string) => {
+    if (!confirm("¿Cancelar reserva?")) return;
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("No autenticado.");
+
+      const res = await fetch(`${API}/reservations/${reservationId}/cancel-user`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Error al cancelar reserva");
+
+      alert("Reserva cancelada.");
+
+      setReservations(prev =>
+        prev.map(r => r.id === reservationId ? { ...r, status: "CANCELLED" } : r)
+      );
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
     <Container sx={{ py: 4, pb: isMobile ? 10 : 4 }}>
-      {/* -------------------- NAVBAR -------------------- */}
+      {/* NAVBAR */}
       <Paper
         elevation={3}
         sx={{
@@ -214,13 +248,6 @@ export default function UsersDashboardPage() {
             onChange={(e, v) => setSection(v === 0 ? "restaurantes" : "reservas")}
             textColor="inherit"
             TabIndicatorProps={{ style: { background: "white" } }}
-            sx={{
-              ml: 0,
-              "& .MuiTab-root": {
-                minHeight: "45px",
-                padding: "4px 10px",
-              },
-            }}
           >
             <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
             <Tab
@@ -261,7 +288,7 @@ export default function UsersDashboardPage() {
         </Menu>
       </Paper>
 
-      {/* -------------------- SECCIÓN RESTAURANTES -------------------- */}
+      {/* SECCIÓN RESTAURANTES */}
       {section === "restaurantes" && (
         <Box sx={{ mb: 12 }}>
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
@@ -318,7 +345,7 @@ export default function UsersDashboardPage() {
         </Box>
       )}
 
-      {/* -------------------- SECCIÓN RESERVAS -------------------- */}
+      {/* SECCIÓN RESERVAS */}
       {section === "reservas" && (
         <Box sx={{ mb: 12 }}>
           <Typography variant="h4" sx={{ color: "white", mb: 2 }}>
@@ -327,21 +354,47 @@ export default function UsersDashboardPage() {
           <Divider sx={{ borderColor: "white", mb: 3 }} />
 
           {reservationsLoading && <Typography sx={{ color: "white" }}>Cargando reservas...</Typography>}
-
           {reservationsError && <Typography color="error">{reservationsError}</Typography>}
 
           {!reservationsLoading && (
             <Box display="grid" gap={2}>
-              {reservations.map((r) => (
-                <Card key={r.id} sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2 }}>
-                  <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
-                  <Typography>Fecha: {formatDate(r.date)}</Typography>
-                  <Typography>Personas: {r.people}</Typography>
-                  <Typography sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}>
-                    {translateStatus(r.status)}
-                  </Typography>
-                </Card>
-              ))}
+              {reservations
+                .filter(r => !hiddenReservations.includes(r.id)) // 🔥 OCULTA LAS ELIMINADAS
+                .map((r) => (
+                  <Card
+                    key={r.id}
+                    sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2, position: "relative" }}
+                  >
+                    {/* ❌ SOLO SI ESTÁ RECHAZADA O CANCELADA */}
+                    {(r.status === "REJECTED" || r.status === "CANCELLED") && (
+                      <IconButton
+                        onClick={() => hideReservation(r.id)}
+                        sx={{ position: "absolute", top: 8, right: 8, color: "white" }}
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    )}
+
+                    <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
+                    <Typography>Fecha: {formatDate(r.date)}</Typography>
+                    <Typography>Personas: {r.people}</Typography>
+
+                    <Typography sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}>
+                      {translateStatus(r.status)}
+                    </Typography>
+
+                    {(r.status === "PENDING" || r.status === "ACCEPTED") && (
+                      <Button
+                        variant="contained"
+                        sx={{ mt: 2, backgroundColor: "red" }}
+                        fullWidth
+                        onClick={() => cancelReservation(r.id)}
+                      >
+                        Cancelar reserva
+                      </Button>
+                    )}
+                  </Card>
+                ))}
 
               {reservations.length === 0 && (
                 <Typography align="center" sx={{ color: "white", mt: 2 }}>
@@ -353,7 +406,7 @@ export default function UsersDashboardPage() {
         </Box>
       )}
 
-      {/* -------------------- MOBILE TABS -------------------- */}
+      {/* MOBILE TABS */}
       {isMobile && (
         <Paper
           elevation={3}
