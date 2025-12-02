@@ -53,7 +53,7 @@ export default function UsersDashboardPage() {
     fetchUserReservations();
     const interval = setInterval(fetchUserReservations, 5000);
     return () => clearInterval(interval);
-  }, [section, previousReservations]);
+  }, []);
 
   const handleSectionChange = (newSection: "restaurantes" | "reservas") => {
     setSection(newSection);

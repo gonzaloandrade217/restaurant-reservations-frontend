@@ -32,48 +32,45 @@ export default function ReservationsSection({ onUpdate }: Props) {
     });
   };
 
-  useEffect(() => {
-    localStorage.setItem("hiddenReservations", JSON.stringify(hiddenReservations));
-  }, [hiddenReservations]);
+  const fetchReservations = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const userId = localStorage.getItem("userId");
+      if (!token || !userId) throw new Error("Sesión inválida.");
 
-  useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        const token = localStorage.getItem("authToken");
-        const userId = localStorage.getItem("userId");
-        if (!token || !userId) throw new Error("Sesión inválida.");
+      const res = await fetch(`${API}/reservations/user/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        const res = await fetch(`${API}/reservations/user/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      if (!res.ok) throw new Error("Error al obtener reservas");
 
-        if (!res.ok) throw new Error("Error al obtener reservas");
+      const data: any[] = await res.json();
 
-        const data: any[] = await res.json();
+      // Detecta cambios de estado
+      const previous = previousReservationsRef.current;
+      const hasStateChanged = data.some(r => {
+        const prev = previous.find(p => p.id === r.id);
+        return prev && prev.status !== r.status;
+      });
 
-        // Detecta cambios de estado
-        const previous = previousReservationsRef.current;
-        const hasStateChanged = data.some(r => {
-          const prev = previous.find(p => p.id === r.id);
-          return prev && prev.status !== r.status;
-        });
-
+      // Solo actualizar si cambió algo
+      if (JSON.stringify(previous) !== JSON.stringify(data)) {
         previousReservationsRef.current = data;
-
-        if (onUpdate) onUpdate(data, hasStateChanged);
-
         setReservations(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        if (onUpdate) onUpdate(data, hasStateChanged);
       }
-    };
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchReservations();
     const interval = setInterval(fetchReservations, 5000);
     return () => clearInterval(interval);
-  }, [onUpdate]);
+  }, []); // Se ejecuta solo al montar
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -146,7 +143,13 @@ export default function ReservationsSection({ onUpdate }: Props) {
 
             <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
             <Typography>Fecha: {formatDate(r.date)}</Typography>
-            <Typography>Personas: {r.people}</Typography>
+            <Typography>Personas: {r.partySize}</Typography>
+
+            {r.cancelReason && (
+              <Typography sx={{ mt: 1, fontStyle: "italic", color: "#ff6b6b" }}>
+                Razón de cancelación: {r.cancelReason}
+              </Typography>
+            )}
 
             <Typography sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}>
               {translateStatus(r.status)}
