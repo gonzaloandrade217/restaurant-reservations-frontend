@@ -35,7 +35,10 @@ export default function AdminDashboardPage() {
 
   const [section, setSection] = useState<"restaurantes" | "reservas" | "usuarios">("restaurantes");
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // 🔵 NOTIFICACIONES
   const [hasPending, setHasPending] = useState(false);
+  const [hasUserCanceled, setHasUserCanceled] = useState(false);
 
   const handleRestaurantCreated = () => setRefreshRestaurants(prev => prev + 1);
 
@@ -58,9 +61,35 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // ------------------ FETCH CANCELADAS POR USUARIOS ------------------
+  const fetchCanceledByUsers = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const adminId = localStorage.getItem("userId");
+      if (!token || !adminId) return;
+
+      const res = await fetch(`http://192.168.1.6:4000/reservations/admin/canceled-by-users/${adminId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setHasUserCanceled(data.length > 0);
+    } catch (err) {
+      console.error("Error cargando reservas canceladas por usuarios", err);
+    }
+  };
+
+  // ------------------ INTERVALO DE ACTUALIZACIÓN ------------------
   useEffect(() => {
     fetchPendingReservations();
-    const interval = setInterval(fetchPendingReservations, 5000); // chequea cada 5s
+    fetchCanceledByUsers();
+
+    const interval = setInterval(() => {
+      fetchPendingReservations();
+      fetchCanceledByUsers();
+    }, 5000);
+
     return () => clearInterval(interval);
   }, [refreshReservations]);
 
@@ -155,7 +184,7 @@ export default function AdminDashboardPage() {
               icon={
                 <Box sx={{ position: "relative", display: "inline-flex" }}>
                   <BookOnlineIcon />
-                  {hasPending && (
+                  {(hasPending || hasUserCanceled) && (
                     <Box
                       sx={{
                         position: "absolute",
@@ -186,7 +215,7 @@ export default function AdminDashboardPage() {
             <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>
               <Box sx={{ position: "relative", display: "inline-flex" }}>
                 Reservas
-                {hasPending && (
+                {(hasPending || hasUserCanceled) && (
                   <Box
                     sx={{
                       position: "absolute",

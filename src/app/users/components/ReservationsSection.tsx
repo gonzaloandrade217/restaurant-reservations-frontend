@@ -70,7 +70,7 @@ export default function ReservationsSection({ onUpdate }: Props) {
     fetchReservations();
     const interval = setInterval(fetchReservations, 5000);
     return () => clearInterval(interval);
-  }, []); // Se ejecuta solo al montar
+  }, []); 
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);

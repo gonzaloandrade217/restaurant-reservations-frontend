@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Container, Paper, Box, TextField, Tabs, Tab } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
@@ -16,13 +16,15 @@ export default function UsersDashboardPage() {
   const [section, setSection] = useState<"restaurantes" | "reservas">("restaurantes");
   const [newNotification, setNewNotification] = useState(false);
   const [search, setSearch] = useState("");
-  const [previousReservations, setPreviousReservations] = useState<any[]>([]);
+  // previousReservations ahora lo guardamos en un ref para evitar problemas con closures del interval
+  const previousReservationsRef = useRef<any[]>([]);
+  const [previousReservationsState, setPreviousReservationsState] = useState<any[]>([]); // para render / debugging si hace falta
 
   const isMobile = useMediaQuery("(max-width:600px)");
   const tabValue = section === "restaurantes" ? 0 : 1;
 
   // ------------------ FETCH RESERVAS DEL USER ------------------
-  const fetchUserReservations = async () => {
+  const fetchUserReservations = useCallback(async () => {
     try {
       const token = localStorage.getItem("authToken");
       const userId = localStorage.getItem("userId");
@@ -36,24 +38,50 @@ export default function UsersDashboardPage() {
 
       const latestReservations = await res.json();
 
+      // comparar contra el ref (si existe)
+      const prevList = previousReservationsRef.current || [];
+
       const hasStateChanged = latestReservations.some((r: { id: any; status: any }) => {
-        const prev = previousReservations.find(p => p.id === r.id);
+        const prev = prevList.find(p => p.id === r.id);
         return prev && prev.status !== r.status;
       });
 
-      if (hasStateChanged && section !== "reservas") setNewNotification(true);
+      // si hay cambio y el usuario no está mirando la sección reservas -> notificar (ícono)
+      if (hasStateChanged && section !== "reservas") {
+        setNewNotification(true);
+      }
 
-      setPreviousReservations(latestReservations);
+      // actualizar el ref con la lista más reciente para próximas comparaciones
+      previousReservationsRef.current = latestReservations;
+      // si querés verlas en el estado también (útil para debugging)
+      setPreviousReservationsState(latestReservations);
     } catch (err) {
       console.error("Error cargando reservas del user", err);
     }
-  };
+  }, [section]);
 
   useEffect(() => {
+    // fetch inicial
     fetchUserReservations();
-    const interval = setInterval(fetchUserReservations, 5000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // interval que usa la versión más actual de fetchUserReservations (porque está memoizada con useCallback)
+    const interval = setInterval(() => {
+      fetchUserReservations();
+    }, 5000);
+
+    // volver a traer cuando se vuelve visible (móviles a veces pausan los timers)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUserReservations();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [fetchUserReservations]);
 
   const handleSectionChange = (newSection: "restaurantes" | "reservas") => {
     setSection(newSection);
