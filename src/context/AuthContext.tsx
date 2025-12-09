@@ -1,48 +1,74 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type Role = 'USER' | 'ADMIN';
+export type Role = "USER" | "ADMIN";
 
 interface AuthContextType {
   isLoggedIn: boolean;
   userRole: Role | null;
-  login: (token: string, role: Role) => void; 
+  token: string | null;
+  login: (token: string, role: Role) => void;
   logout: () => void;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Cargar token y rol al iniciar la app
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    const storedRole = localStorage.getItem('userRole') as Role;
+    const storedToken = localStorage.getItem("authToken");
+    const storedRole = localStorage.getItem("userRole") as Role;
 
     if (storedToken && storedRole) {
       setToken(storedToken);
       setRole(storedRole);
     }
+
+    setLoading(false);
   }, []);
 
+  // LOGIN — Guarda token + rol y emite el evento global
   const login = (authToken: string, userRole: Role) => {
-    localStorage.setItem('authToken', authToken);
-    localStorage.setItem('userRole', userRole);
+    localStorage.setItem("authToken", authToken);
+    localStorage.setItem("userRole", userRole);
+
+    // Notifica a toda la app que el token cambió
+    window.dispatchEvent(new Event("authTokenUpdated"));
+
     setToken(authToken);
     setRole(userRole);
   };
 
+  // LOGOUT
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+
+    window.dispatchEvent(new Event("authTokenUpdated")); // opcional pero recomendado
+
     setToken(null);
     setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!token, userRole: role, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: !!token,
+        userRole: role,
+        token,
+        login,
+        logout,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -50,8 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
+  if (!context) {
+    throw new Error("useAuth debe usarse dentro de un AuthProvider");
   }
   return context;
 };

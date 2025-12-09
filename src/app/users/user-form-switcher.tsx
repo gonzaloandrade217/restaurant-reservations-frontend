@@ -43,8 +43,13 @@ export default function UserFormSwitcher() {
     if (userName) localStorage.setItem("userName", userName);
     if (userPhoto) localStorage.setItem("userPhoto", userPhoto);
 
+    // Avisar a la app que cambió el token
+    window.dispatchEvent(new Event("authTokenUpdated"));
+
+    // Actualizar contexto
     login(access_token, userRole);
 
+    // Redirecciones
     if (userRole === "ADMIN") router.push("/admin/dashboard");
     else router.push("/users/pages");
   };
@@ -54,7 +59,7 @@ export default function UserFormSwitcher() {
     setMessage("");
 
     if (isLogin) {
-      // Login normal
+      // LOGIN NORMAL
       try {
         const res = await fetch("http://192.168.1.6:4000/users/login", {
           method: "POST",
@@ -82,7 +87,7 @@ export default function UserFormSwitcher() {
       return;
     }
 
-    // Registro nuevo usuario
+    // REGISTRO NORMAL
     const userData = {
       name,
       email,
@@ -91,6 +96,7 @@ export default function UserFormSwitcher() {
     };
 
     try {
+      // Crear usuario
       const response = await fetch("http://192.168.1.6:4000/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,19 +113,35 @@ export default function UserFormSwitcher() {
         throw new Error(errorData.message || "Error al crear el usuario");
       }
 
-      const createdUser = await response.json();
+      // Usuario creado, ahora login automático con el mismo email y password
+      const loginRes = await fetch("http://192.168.1.6:4000/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!loginRes.ok) throw new Error("Error al iniciar sesión automáticamente");
+
+      const loginData = await loginRes.json();
+
       handleLogin(
-        createdUser.access_token,
-        createdUser.role as Role,
-        createdUser.id,
-        createdUser.name,
-        createdUser.avatar
+        loginData.access_token,
+        loginData.user.role as Role,
+        loginData.user.id,
+        loginData.user.name,
+        loginData.user.avatar
       );
+
+      setMessage("Registro y login exitosos!");
+      setName("");
+      setEmail("");
+      setPassword("");
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
     }
   };
 
+  // LOGIN GOOGLE
   const handleCredentialResponse = async (response: any) => {
     const idToken = response.credential;
 
@@ -127,14 +149,17 @@ export default function UserFormSwitcher() {
       const res = await fetch("http://192.168.1.6:4000/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, role: isAdmin ? "ADMIN" : "USER" }),
+        body: JSON.stringify({
+          idToken,
+          isAdmin: isAdmin,
+        }),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
 
         if (errorData.message?.includes("email")) {
-          setMessage("El correo ya está registrado. Iniciá sesión en vez de registrarte.");
+          setMessage("El correo ya está registrado. Iniciá sesión.");
           return;
         }
 
@@ -142,6 +167,7 @@ export default function UserFormSwitcher() {
       }
 
       const data = await res.json();
+
       handleLogin(
         data.access_token,
         data.user.role as Role,
@@ -151,6 +177,7 @@ export default function UserFormSwitcher() {
       );
     } catch (error: any) {
       console.error("Error al enviar token al backend:", error.message);
+      setMessage(`Error: ${error.message}`);
     }
   };
 
@@ -261,7 +288,11 @@ export default function UserFormSwitcher() {
               sx={{ color: "white" }}
             />
           }
-          label={<Typography sx={{ color: "white" }}>Registrarse como Administrador</Typography>}
+          label={
+            <Typography sx={{ color: "white" }}>
+              Registrarse como Administrador
+            </Typography>
+          }
         />
       )}
 
@@ -309,7 +340,9 @@ export default function UserFormSwitcher() {
           setMessage("");
         }}
       >
-        {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciar sesión"}
+        {isLogin
+          ? "¿No tenés cuenta? Registrate"
+          : "¿Ya tenés cuenta? Iniciar sesión"}
       </Button>
 
       <div

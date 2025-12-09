@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -14,6 +14,14 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  CircularProgress,
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -21,66 +29,90 @@ import PeopleIcon from "@mui/icons-material/People";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 
+import { useRouter } from "next/navigation";
+
 import UserList from "../../users/user-list";
 import CreateRestaurantForm from "../../restaurants/create-restaurant";
 import RestaurantList from "../../restaurants/restaurant-list";
 import AdminReservationsList from "../admin-reservations-list";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 600px)");
+  const { token, loading } = useAuth(); 
 
   const [refreshRestaurants, setRefreshRestaurants] = useState(0);
   const [refreshUsers, setRefreshUsers] = useState(0);
   const [refreshReservations, setRefreshReservations] = useState(0);
 
-  const [section, setSection] = useState<"restaurantes" | "reservas" | "usuarios">("restaurantes");
+  const [section, setSection] = useState<
+    "restaurantes" | "reservas" | "usuarios"
+  >("restaurantes");
+
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // 🔵 NOTIFICACIONES
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<
+    "success" | "error" | "info"
+  >("info");
+
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+
   const [hasPending, setHasPending] = useState(false);
   const [hasUserCanceled, setHasUserCanceled] = useState(false);
 
-  const handleRestaurantCreated = () => setRefreshRestaurants(prev => prev + 1);
+  // -------------------------------------------------------
+  // FORZAR QUE EL COMPONENTE NO RENDERICE HASTA TENER TOKEN
+  if (loading) {
+    return (
+      <Container sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
-  // ------------------ FETCH RESERVAS PENDIENTES ------------------
+  if (!token) {
+    router.push("/"); // si no hay token, redirect al login
+    return null;
+  }
+
+  // ------------------ FETCH RESERVAS ------------------
   const fetchPendingReservations = async () => {
     try {
-      const token = localStorage.getItem("authToken");
       const adminId = localStorage.getItem("userId");
-      if (!token || !adminId) return;
+      if (!adminId) return;
 
-      const res = await fetch(`http://192.168.1.6:4000/reservations/admin/pending/${adminId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://192.168.1.6:4000/reservations/admin/pending/${adminId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!res.ok) return;
-
       const data = await res.json();
       setHasPending(data.length > 0);
     } catch (err) {
-      console.error("Error cargando reservas pendientes", err);
+      console.error("Error fetchPendingReservations:", err);
     }
   };
 
-  // ------------------ FETCH CANCELADAS POR USUARIOS ------------------
   const fetchCanceledByUsers = async () => {
     try {
-      const token = localStorage.getItem("authToken");
       const adminId = localStorage.getItem("userId");
-      if (!token || !adminId) return;
+      if (!adminId) return;
 
-      const res = await fetch(`http://192.168.1.6:4000/reservations/admin/canceled-by-users/${adminId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://192.168.1.6:4000/reservations/admin/cancelled/${adminId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!res.ok) return;
-
       const data = await res.json();
       setHasUserCanceled(data.length > 0);
     } catch (err) {
-      console.error("Error cargando reservas canceladas por usuarios", err);
+      console.error("Error fetchCanceledByUsers:", err);
     }
   };
 
-  // ------------------ INTERVALO DE ACTUALIZACIÓN ------------------
   useEffect(() => {
     fetchPendingReservations();
     fetchCanceledByUsers();
@@ -88,55 +120,74 @@ export default function AdminDashboardPage() {
     const interval = setInterval(() => {
       fetchPendingReservations();
       fetchCanceledByUsers();
+      setRefreshReservations((prev) => prev + 1);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [refreshReservations]);
+  }, [token]);
 
+  // -----------------------------------------------------------------
   const tabValue =
-    section === "restaurantes" ? 0 :
-    section === "reservas" ? 1 :
-    section === "usuarios" ? 2 :
-    false;
+    section === "restaurantes"
+      ? 0
+      : section === "reservas"
+      ? 1
+      : section === "usuarios"
+      ? 2
+      : false;
 
-  // ------------------------ MENÚ HAMBURGUESA ------------------------
+  // MENÚ
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(menuAnchor);
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setMenuAnchor(event.currentTarget);
+  const handleMenuOpen = (e: any) => setMenuAnchor(e.currentTarget);
   const handleMenuClose = () => setMenuAnchor(null);
 
+  // ------------------ LOGOUT --------------------
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    window.location.href = "/";
+    localStorage.clear();
+    router.push("/");
   };
 
+  // ------------------ ELIMINAR CUENTA --------------------
   const handleDeleteAccount = async () => {
-    if (!confirm("¿Seguro que querés eliminar tu cuenta? Esta acción no se puede deshacer.")) return;
-
     try {
-      const token = localStorage.getItem("authToken");
       const userId = localStorage.getItem("userId");
-      if (!token || !userId) throw new Error("No estás autenticado.");
+      if (!userId) return;
 
       const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error("Error al eliminar usuario");
+      if (!res.ok) {
+        showAlert("Error al eliminar usuario", "error");
+        return;
+      }
 
-      alert("Usuario eliminado correctamente.");
+      showAlert("Usuario eliminado con éxito", "success");
       localStorage.clear();
-      window.location.href = "/";
-    } catch (err: any) {
-      alert(err.message);
+      router.push("/");
+    } catch (err) {
+      showAlert("Error de conexión", "error");
     }
   };
 
-  // ------------------------ RENDER ------------------------
+  const showAlert = (
+    msg: string,
+    severity: "success" | "error" | "info" = "info"
+  ) => {
+    setSnackbarMessage(msg);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  const handleRestaurantCreated = () =>
+    setRefreshRestaurants((prev) => prev + 1);
+
+  // --------------------- RENDER -------------------------
   return (
     <Container sx={{ py: 4 }}>
+      {/* HEADER */}
       <Paper
         elevation={3}
         sx={{
@@ -149,16 +200,14 @@ export default function AdminDashboardPage() {
           justifyContent: "space-between",
           gap: 2,
           borderRadius: 2,
-          overflowX: "auto"
         }}
       >
         <Typography
           sx={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "'Playfair Display'",
             fontSize: "1.4rem",
             fontWeight: 700,
-            color: "#fff",
-            whiteSpace: "nowrap"
+            color: "white",
           }}
         >
           MesaSegura - Administración
@@ -167,22 +216,18 @@ export default function AdminDashboardPage() {
         {!isMobile && (
           <Tabs
             value={tabValue}
-            onChange={(e, newValue) => {
-              if (newValue === 0) setSection("restaurantes");
-              if (newValue === 1) setSection("reservas");
-              if (newValue === 2) setSection("usuarios");
+            onChange={(e, v) => {
+              if (v === 0) setSection("restaurantes");
+              if (v === 1) setSection("reservas");
+              if (v === 2) setSection("usuarios");
             }}
             textColor="inherit"
             TabIndicatorProps={{ style: { background: "white" } }}
-            sx={{
-              flex: 1,
-              "& .MuiTab-root": { minWidth: "120px", padding: "6px 10px", fontSize: "0.85rem", fontWeight: 600 }
-            }}
           >
             <Tab icon={<RestaurantMenuIcon />} label="Restaurantes" />
             <Tab
               icon={
-                <Box sx={{ position: "relative", display: "inline-flex" }}>
+                <Box sx={{ position: "relative" }}>
                   <BookOnlineIcon />
                   {(hasPending || hasUserCanceled) && (
                     <Box
@@ -210,31 +255,52 @@ export default function AdminDashboardPage() {
         </IconButton>
 
         <Menu anchorEl={menuAnchor} open={openMenu} onClose={handleMenuClose}>
-          {isMobile && [
-            <MenuItem key="restaurantes" onClick={() => { setSection("restaurantes"); handleMenuClose(); }}>Restaurantes</MenuItem>,
-            <MenuItem key="reservas" onClick={() => { setSection("reservas"); handleMenuClose(); }}>
-              <Box sx={{ position: "relative", display: "inline-flex" }}>
+          {isMobile && (
+            <>
+              <MenuItem
+                onClick={() => {
+                  setSection("restaurantes");
+                  handleMenuClose();
+                }}
+              >
+                Restaurantes
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSection("reservas");
+                  handleMenuClose();
+                }}
+              >
                 Reservas
-                {(hasPending || hasUserCanceled) && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      right: -4,
-                      width: 12,
-                      height: 12,
-                      bgcolor: "blue",
-                      borderRadius: "50%",
-                    }}
-                  />
-                )}
-              </Box>
-            </MenuItem>,
-            <MenuItem key="usuarios" onClick={() => { setSection("usuarios"); handleMenuClose(); }}>Usuarios</MenuItem>,
-            <Divider key="divider" sx={{ my: 1 }} />,
-          ]}
-          <MenuItem onClick={() => { handleMenuClose(); handleLogout(); }}>Cerrar sesión</MenuItem>
-          <MenuItem onClick={() => { handleMenuClose(); handleDeleteAccount(); }} sx={{ color: "red" }}>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSection("usuarios");
+                  handleMenuClose();
+                }}
+              >
+                Usuarios
+              </MenuItem>
+              <Divider />
+            </>
+          )}
+
+          <MenuItem
+            onClick={() => {
+              handleMenuClose();
+              handleLogout();
+            }}
+          >
+            Cerrar sesión
+          </MenuItem>
+
+          <MenuItem
+            sx={{ color: "red" }}
+            onClick={() => {
+              handleMenuClose();
+              setOpenDeleteDialog(true);
+            }}
+          >
             Eliminar cuenta
           </MenuItem>
         </Menu>
@@ -242,36 +308,86 @@ export default function AdminDashboardPage() {
 
       {/* SECCIONES */}
       {section === "restaurantes" && (
-        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Gestión de Restaurantes</Typography>
+        <Box sx={{ p: 3, backgroundColor: "black", borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ color: "white" }}>
+            Gestión de Restaurantes
+          </Typography>
+
           <Button
             variant="contained"
-            sx={{ mt: 2, mb: 3, backgroundColor: "#ff9800", "&:hover": { backgroundColor: "#e67834" } }}
-            onClick={() => setShowCreateForm(prev => !prev)}
+            sx={{ mt: 2, mb: 3, backgroundColor: "#ff9800" }}
+            onClick={() => setShowCreateForm(!showCreateForm)}
           >
             {showCreateForm ? "Cerrar formulario" : "Crear restaurante"}
           </Button>
-          {showCreateForm && <Box sx={{ mb: 3 }}><CreateRestaurantForm onCreated={handleRestaurantCreated} /></Box>}
+
+          {showCreateForm && (
+            <Box sx={{ mb: 3 }}>
+              <CreateRestaurantForm onCreated={handleRestaurantCreated} />
+            </Box>
+          )}
+
           <Divider sx={{ my: 3, borderColor: "white" }} />
+
           <RestaurantList refresh={refreshRestaurants} />
         </Box>
       )}
 
       {section === "reservas" && (
-        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Reservas</Typography>
+        <Box sx={{ p: 3, backgroundColor: "black", borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ color: "white" }}>
+            Reservas
+          </Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <AdminReservationsList refresh={refreshReservations} />
         </Box>
       )}
 
       {section === "usuarios" && (
-        <Box sx={{ mb: 6, p: 3, backgroundColor: "black", border: "1px solid white", borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ color: "white" }}>Lista de Usuarios</Typography>
+        <Box sx={{ p: 3, backgroundColor: "black", borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ color: "white" }}>
+            Lista de Usuarios
+          </Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
           <UserList refresh={refreshUsers} />
         </Box>
       )}
+
+      {/* DIALOG CONFIRMAR ELIMINACIÓN */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+      >
+        <DialogTitle>Eliminar cuenta</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Seguro que querés eliminar tu cuenta? Esta acción es irreversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteDialog(false)}>Cancelar</Button>
+          <Button color="error" onClick={handleDeleteAccount}>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* SNACKBAR ALERT */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbarSeverity}
+          onClose={() => setSnackbarOpen(false)}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
