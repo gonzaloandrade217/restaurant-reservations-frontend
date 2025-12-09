@@ -1,13 +1,24 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, TextField, Button, Typography, MenuItem } from "@mui/material";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
+// Tipos y Props
 interface CreateRestaurantFormProps {
   onCreated?: () => void;
 }
 
 type MesaTipoOption = "CUADRADA" | "RECTANGULAR" | "REDONDA";
+
+// Configuración del icono de Leaflet
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 export default function CreateRestaurantForm({ onCreated }: CreateRestaurantFormProps) {
   const [name, setName] = useState("");
@@ -17,16 +28,35 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [description, setDescription] = useState("");
   const [capacity, setCapacity] = useState<number | "">("");
   const [cantidadMesas, setCantidadMesas] = useState<number | "">("");
-
   const [mesaCapacidad, setMesaCapacidad] = useState<number | "">("");
   const [mesaTipo, setMesaTipo] = useState<MesaTipoOption | "">(""); 
-
+  const [latitude, setLatitude] = useState<number>(-34.617);
+  const [longitude, setLongitude] = useState<number>(-58.368);
   const [message, setMessage] = useState("");
 
+  // Geocoding: centra el mapa según ciudad/dirección
+  useEffect(() => {
+    async function geocode() {
+      if (!city && !address) return;
+      const query = encodeURIComponent(`${address}, ${city}`);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          setLatitude(parseFloat(data[0].lat));
+          setLongitude(parseFloat(data[0].lon));
+        }
+      } catch (err) {
+        console.error("Error al geocodificar:", err);
+      }
+    }
+    geocode();
+  }, [city, address]);
+
+  // Envía el formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("Creando restaurante...");
-
     try {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No se encontró el token.");
@@ -43,10 +73,12 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           address,
           phone,
           description,
-          capacity: Number(capacity),
-          cantidadMesas: Number(cantidadMesas),
-          mesaCapacidad: Number(mesaCapacidad),
-          mesaTipo: mesaTipo || undefined, 
+          capacity: capacity === "" ? undefined : capacity,
+          cantidadMesas: cantidadMesas === "" ? undefined : cantidadMesas,
+          mesaCapacidad: mesaCapacidad === "" ? undefined : mesaCapacidad,
+          mesaTipo: mesaTipo || undefined,
+          latitude,
+          longitude,
         }),
       });
 
@@ -59,20 +91,42 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       setMessage(`Restaurante creado con éxito: ${restaurantData.name}`);
 
       // Limpiar formulario
-      setName("");
-      setCity("");
-      setAddress("");
-      setPhone("");
-      setDescription("");
-      setCapacity("");
-      setCantidadMesas("");
-      setMesaCapacidad("");
-      setMesaTipo("");
+      setName(""); setCity(""); setAddress(""); setPhone(""); setDescription("");
+      setCapacity(""); setCantidadMesas(""); setMesaCapacidad(""); setMesaTipo("");
+      setLatitude(-34.617); setLongitude(-58.368);
 
       if (onCreated) onCreated();
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
     }
+  };
+
+  // Marker draggable
+  function DraggableMarker() {
+    const map = useMap();
+    useEffect(() => {
+      map.setView([latitude, longitude], 13);
+    }, [latitude, longitude, map]);
+
+    return (
+      <Marker
+        position={[latitude, longitude]}
+        draggable
+        eventHandlers={{
+          dragend: (e) => {
+            const pos = e.target.getLatLng();
+            setLatitude(pos.lat);
+            setLongitude(pos.lng);
+          },
+        }}
+      />
+    );
+  }
+
+  // Función helper para manejar inputs numéricos
+  const handleNumberChange = (value: string, setter: (val: number | "") => void) => {
+    if (value === "") setter("");
+    else setter(Number(value));
   };
 
   return (
@@ -82,7 +136,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       sx={{
         p: { xs: 2, sm: 3, md: 4 },
         width: "100%",
-        maxWidth: 450,
+        maxWidth: 500,
         mx: "auto",
         mt: { xs: 2, sm: 4 },
         border: "1px solid white",
@@ -93,72 +147,26 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         gap: { xs: 2, sm: 2.5, md: 3 },
       }}
     >
-      <Typography
-        variant="h5"
-        align="center"
-        sx={{
-          color: "white",
-          fontSize: { xs: "1.4rem", sm: "1.6rem", md: "1.8rem" },
-        }}
-      >
+      <Typography variant="h5" align="center" sx={{ color: "white", fontSize: { xs: "1.4rem", sm: "1.6rem", md: "1.8rem" } }}>
         Crear Nuevo Restaurante
       </Typography>
 
-      {/* Inputs */}
       {[
-        {
-          label: "Nombre",
-          value: name,
-          onChange: (e: any) => setName(e.target.value),
-        },
-        {
-          label: "Ciudad",
-          value: city,
-          onChange: (e: any) => setCity(e.target.value),
-        },
-        {
-          label: "Dirección",
-          value: address,
-          onChange: (e: any) => setAddress(e.target.value),
-        },
-        {
-          label: "Teléfono",
-          value: phone,
-          onChange: (e: any) => setPhone(e.target.value),
-        },
-        {
-          label: "Capacidad Total",
-          value: capacity,
-          type: "number",
-          onChange: (e: any) =>
-            setCapacity(e.target.value === "" ? "" : Number(e.target.value)),
-        },
-        {
-          label: "Cantidad de Mesas",
-          value: cantidadMesas,
-          type: "number",
-          onChange: (e: any) =>
-            setCantidadMesas(e.target.value === "" ? "" : Number(e.target.value)),
-        },
-        {
-          label: "Capacidad por Mesa",
-          value: mesaCapacidad,
-          type: "number",
-          onChange: (e: any) =>
-            setMesaCapacidad(e.target.value === "" ? "" : Number(e.target.value)),
-        },
-      ].map((field, index) => (
+        { label: "Nombre", value: name, onChange: setName },
+        { label: "Ciudad", value: city, onChange: setCity },
+        { label: "Dirección", value: address, onChange: setAddress },
+        { label: "Teléfono", value: phone, onChange: setPhone },
+      ].map((field, i) => (
         <TextField
-          key={index}
-          {...field}
+          key={i}
+          label={field.label}
+          type="text"
+          value={field.value}
+          onChange={(e) => field.onChange(e.target.value)}
           required
           fullWidth
-          InputLabelProps={{
-            style: { color: "white" },
-          }}
-          inputProps={{
-            style: { color: "white" },
-          }}
+          InputLabelProps={{ style: { color: "white" } }}
+          inputProps={{ style: { color: "white" } }}
           sx={{
             "& .MuiOutlinedInput-root": {
               "& fieldset": { borderColor: "white" },
@@ -169,11 +177,36 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         />
       ))}
 
-      {/* Select Tipo de Mesa */}
+      {[
+        { label: "Capacidad Total", value: capacity, setter: setCapacity },
+        { label: "Cantidad de Mesas", value: cantidadMesas, setter: setCantidadMesas },
+        { label: "Capacidad por Mesa", value: mesaCapacidad, setter: setMesaCapacidad },
+      ].map((field, i) => (
+        <TextField
+          key={i}
+          label={field.label}
+          type="number"
+          value={field.value}
+          onChange={(e) => handleNumberChange(e.target.value, field.setter)}
+          required
+          fullWidth
+          InputLabelProps={{ style: { color: "white" } }}
+          inputProps={{ style: { color: "white" } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "white" },
+              "&:hover fieldset": { borderColor: "white" },
+              "&.Mui-focused fieldset": { borderColor: "white" },
+            },
+          }}
+        />
+      ))}
+
+      {/* Tipo de Mesa */}
       <TextField
         select
         label="Tipo de Mesa"
-        value={mesaTipo} 
+        value={mesaTipo}
         onChange={(e) => setMesaTipo(e.target.value as MesaTipoOption)}
         required
         fullWidth
@@ -184,14 +217,9 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
             "& fieldset": { borderColor: "white" },
             "&:hover fieldset": { borderColor: "white" },
             "&.Mui-focused fieldset": { borderColor: "white" },
-            color: "white",
           },
-          "& .MuiSelect-select": {
-          color: "white",
-          },
-          "& .MuiMenuItem-root": {
-          color: "black", 
-          },
+          "& .MuiSelect-select": { color: "white" },
+          "& .MuiMenuItem-root": { color: "black" },
         }}
       >
         <MenuItem value="">Seleccione un tipo</MenuItem>
@@ -219,7 +247,14 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         }}
       />
 
-      {/* Botón */}
+      {/* Mapa */}
+      <Box sx={{ height: 300, width: "100%", borderRadius: 2, overflow: "hidden" }}>
+        <MapContainer center={[latitude, longitude]} zoom={13} style={{ height: "100%", width: "100%" }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <DraggableMarker />
+        </MapContainer>
+      </Box>
+
       <Button
         type="submit"
         fullWidth
@@ -229,22 +264,14 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           py: { xs: 1.2, sm: 1.4 },
           fontSize: { xs: "0.95rem", sm: "1rem" },
           borderRadius: 2,
-          "&:hover": {
-            backgroundColor: "#e86f00",
-          },
+          "&:hover": { backgroundColor: "#e86f00" },
         }}
       >
         Registrar
       </Button>
 
       {message && (
-        <Typography
-          align="center"
-          sx={{
-            color: "white",
-            fontSize: { xs: "0.9rem", sm: "1rem" },
-          }}
-        >
+        <Typography align="center" sx={{ color: "white", fontSize: { xs: "0.9rem", sm: "1rem" } }}>
           {message}
         </Typography>
       )}

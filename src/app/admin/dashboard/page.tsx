@@ -44,7 +44,6 @@ export default function AdminDashboardPage() {
 
   const [refreshRestaurants, setRefreshRestaurants] = useState(0);
   const [refreshUsers, setRefreshUsers] = useState(0);
-  const [refreshReservations, setRefreshReservations] = useState(0);
 
   const [section, setSection] = useState<
     "restaurantes" | "reservas" | "usuarios"
@@ -63,6 +62,9 @@ export default function AdminDashboardPage() {
   const [hasPending, setHasPending] = useState(false);
   const [hasUserCanceled, setHasUserCanceled] = useState(false);
 
+  const [pendingReservations, setPendingReservations] = useState<any[]>([]);
+  const [userCanceledReservations, setUserCanceledReservations] = useState<any[]>([]);
+
   // -------------------------------------------------------
   // FORZAR QUE EL COMPONENTE NO RENDERICE HASTA TENER TOKEN
   if (loading) {
@@ -79,50 +81,40 @@ export default function AdminDashboardPage() {
   }
 
   // ------------------ FETCH RESERVAS ------------------
-  const fetchPendingReservations = async () => {
-    try {
-      const adminId = localStorage.getItem("userId");
-      if (!adminId) return;
-
-      const res = await fetch(
-        `http://192.168.1.6:4000/reservations/admin/pending/${adminId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      setHasPending(data.length > 0);
-    } catch (err) {
-      console.error("Error fetchPendingReservations:", err);
-    }
-  };
-
-  const fetchCanceledByUsers = async () => {
-    try {
-      const adminId = localStorage.getItem("userId");
-      if (!adminId) return;
-
-      const res = await fetch(
-        `http://192.168.1.6:4000/reservations/admin/cancelled/${adminId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      setHasUserCanceled(data.length > 0);
-    } catch (err) {
-      console.error("Error fetchCanceledByUsers:", err);
-    }
-  };
-
   useEffect(() => {
-    fetchPendingReservations();
-    fetchCanceledByUsers();
+    const fetchReservations = async () => {
+      try {
+        const adminId = localStorage.getItem("userId");
+        if (!adminId) return;
 
-    const interval = setInterval(() => {
-      fetchPendingReservations();
-      fetchCanceledByUsers();
-      setRefreshReservations((prev) => prev + 1);
-    }, 5000);
+        // Pendientes
+        const pendingRes = await fetch(
+          `http://192.168.1.6:4000/reservations/admin/pending/${adminId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (pendingRes.ok) {
+          const pendingData = await pendingRes.json();
+          setPendingReservations(pendingData);
+          setHasPending(pendingData.length > 0);
+        }
 
+        // Canceladas por usuarios
+        const canceledRes = await fetch(
+          `http://192.168.1.6:4000/reservations/admin/cancelled/${adminId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (canceledRes.ok) {
+          const canceledData = await canceledRes.json();
+          setUserCanceledReservations(canceledData);
+          setHasUserCanceled(canceledData.length > 0);
+        }
+      } catch (err) {
+        console.error("Error fetchReservations:", err);
+      }
+    };
+
+    fetchReservations();
+    const interval = setInterval(fetchReservations, 5000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -181,8 +173,10 @@ export default function AdminDashboardPage() {
     setSnackbarOpen(true);
   };
 
-  const handleRestaurantCreated = () =>
+  const handleRestaurantCreated = () => {
     setRefreshRestaurants((prev) => prev + 1);
+    setShowCreateForm(false);
+  }
 
   // --------------------- RENDER -------------------------
   return (
@@ -254,36 +248,39 @@ export default function AdminDashboardPage() {
           <MenuIcon />
         </IconButton>
 
+        {/* ---------- MENU ---------- */}
         <Menu anchorEl={menuAnchor} open={openMenu} onClose={handleMenuClose}>
-          {isMobile && (
-            <>
+          {isMobile &&
+            [
               <MenuItem
+                key="restaurantes"
                 onClick={() => {
                   setSection("restaurantes");
                   handleMenuClose();
                 }}
               >
                 Restaurantes
-              </MenuItem>
+              </MenuItem>,
               <MenuItem
+                key="reservas"
                 onClick={() => {
                   setSection("reservas");
                   handleMenuClose();
                 }}
               >
                 Reservas
-              </MenuItem>
+              </MenuItem>,
               <MenuItem
+                key="usuarios"
                 onClick={() => {
                   setSection("usuarios");
                   handleMenuClose();
                 }}
               >
                 Usuarios
-              </MenuItem>
-              <Divider />
-            </>
-          )}
+              </MenuItem>,
+              <Divider key="divider" />,
+            ]}
 
           <MenuItem
             onClick={() => {
@@ -339,7 +336,9 @@ export default function AdminDashboardPage() {
             Reservas
           </Typography>
           <Divider sx={{ my: 3, borderColor: "white" }} />
-          <AdminReservationsList refresh={refreshReservations} />
+          <AdminReservationsList
+            refresh={0}
+          />
         </Box>
       )}
 

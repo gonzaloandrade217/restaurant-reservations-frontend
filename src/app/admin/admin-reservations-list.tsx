@@ -34,20 +34,15 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   const [loadingCancelled, setLoadingCancelled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Razón de cancelación (solo para cancelar)
   const [localCancelReasons, setLocalCancelReasons] = useState<{ [id: string]: string }>({});
-
-  // Excepción (solo para accept/reject)
   const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
-
   const [searchDate, setSearchDate] = useState("");
   const [cancelledOffset, setCancelledOffset] = useState(0);
-
-  // Ocultar canceladas
   const [hideCancelled, setHideCancelled] = useState(false);
 
   const BASE = "http://192.168.1.6:4000";
 
+  // Carga reservas pendientes y aceptadas
   const loadReservations = async () => {
     const token = localStorage.getItem("authToken");
     const adminId = localStorage.getItem("userId");
@@ -63,7 +58,7 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         }),
         fetch(`${BASE}/reservations/admin/accepted/${adminId}`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
+        }),
       ]);
 
       const pendingData: Reservation[] = await pendingRes.json();
@@ -71,7 +66,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
       setPendingReservations(pendingData);
       setAcceptedReservations(acceptedData);
-
     } catch (err: any) {
       console.error(err);
       setError(err.message);
@@ -80,24 +74,21 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     }
   };
 
+  // Carga reservas canceladas (paginadas)
   const loadCancelled = async (limit = 10) => {
     const token = localStorage.getItem("authToken");
     const adminId = localStorage.getItem("userId");
     if (!token || !adminId) return;
 
     setLoadingCancelled(true);
-
     try {
       const res = await fetch(
         `${BASE}/reservations/admin/cancelled/${adminId}?limit=${limit}&offset=${cancelledOffset}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data: Reservation[] = await res.json();
-
       setCancelledReservations(prev => [...prev, ...data]);
       setCancelledOffset(prev => prev + limit);
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -113,7 +104,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
-    // Enviar excepción si la tiene
     if (localExceptions[id]) {
       await fetch(`${BASE}/reservations/${id}/exception`, {
         method: "PATCH",
@@ -186,7 +176,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>
 
-        {/* EXCEPCIÓN (para aceptar/rechazar) */}
         {!isAccepted && (
           <TextField
             label="Excepción"
@@ -195,13 +184,10 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
             fullWidth
             sx={{ mb: 1 }}
             value={localExceptions[r.id] || ""}
-            onChange={(e) =>
-              setLocalExceptions((prev) => ({ ...prev, [r.id]: e.target.value }))
-            }
+            onChange={(e) => setLocalExceptions(prev => ({ ...prev, [r.id]: e.target.value }))}
           />
         )}
 
-        {/* Razón de cancelación (solo sirve para cancelar) */}
         {isAccepted && (
           <TextField
             label="Razón de cancelación"
@@ -210,9 +196,7 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
             fullWidth
             sx={{ mb: 1 }}
             value={localCancelReasons[r.id] || ""}
-            onChange={(e) =>
-              setLocalCancelReasons(prev => ({ ...prev, [r.id]: e.target.value }))
-            }
+            onChange={(e) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
           />
         )}
 
@@ -272,7 +256,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         />
       </Box>
 
-      {/* PENDIENTES */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Pendientes</Typography>
       <Grid container spacing={2} sx={{ mb: 6 }}>
         {filteredPending.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas pendientes</Typography>}
@@ -285,7 +268,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
       <Divider sx={{ my: 3, borderColor: "white" }} />
 
-      {/* ACEPTADAS */}
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Aceptadas</Typography>
       <Grid container spacing={2}>
         {filteredAccepted.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas aceptadas</Typography>}
@@ -298,13 +280,9 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
 
       <Divider sx={{ my: 3, borderColor: "white" }} />
 
-      {/* CANCELADAS */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Canceladas</Typography>
-
         <Box sx={{ display: "flex", gap: 2 }}>
-
-          {/* Ocultar / Mostrar */}
           <Button
             variant="contained"
             sx={{ backgroundColor: "#ff9800" }}
@@ -312,7 +290,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
           >
             {hideCancelled ? "Mostrar canceladas" : "Ocultar canceladas"}
           </Button>
-
           <Button
             variant="contained"
             sx={{ backgroundColor: "#ff9800" }}
@@ -321,11 +298,9 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
           >
             {loadingCancelled ? "Cargando..." : "Ver más"}
           </Button>
-
         </Box>
       </Box>
 
-      {/* Render canceladas si no está oculto */}
       {!hideCancelled && (
         <Grid container spacing={2}>
           {filteredCancelled.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas canceladas</Typography>}
