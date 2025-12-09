@@ -9,9 +9,13 @@ import {
   CardContent,
   Button,
   Container,
-  Divider,
-  TextField
+  TextField,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Badge
 } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 interface Reservation {
   id: string;
@@ -31,18 +35,21 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   const [acceptedReservations, setAcceptedReservations] = useState<Reservation[]>([]);
   const [cancelledReservations, setCancelledReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCancelled, setLoadingCancelled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [localCancelReasons, setLocalCancelReasons] = useState<{ [id: string]: string }>({});
   const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
-  const [searchDate, setSearchDate] = useState("");
-  const [cancelledOffset, setCancelledOffset] = useState(0);
-  const [hideCancelled, setHideCancelled] = useState(false);
+
+  // Por defecto, mostrar reservas del día actual
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const defaultDate = `${yyyy}-${mm}-${dd}`;
+  const [searchDate, setSearchDate] = useState(defaultDate);
 
   const BASE = "http://192.168.1.6:4000";
 
-  // Carga reservas pendientes y aceptadas
   const loadReservations = async () => {
     const token = localStorage.getItem("authToken");
     const adminId = localStorage.getItem("userId");
@@ -52,47 +59,20 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     setError(null);
 
     try {
-      const [pendingRes, acceptedRes] = await Promise.all([
-        fetch(`${BASE}/reservations/admin/pending/${adminId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${BASE}/reservations/admin/accepted/${adminId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const [pendingRes, acceptedRes, cancelledRes] = await Promise.all([
+        fetch(`${BASE}/reservations/admin/pending/${adminId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${BASE}/reservations/admin/accepted/${adminId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${BASE}/reservations/admin/cancelled/${adminId}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const pendingData: Reservation[] = await pendingRes.json();
-      const acceptedData: Reservation[] = await acceptedRes.json();
-
-      setPendingReservations(pendingData);
-      setAcceptedReservations(acceptedData);
+      setPendingReservations(await pendingRes.json());
+      setAcceptedReservations(await acceptedRes.json());
+      setCancelledReservations(await cancelledRes.json());
     } catch (err: any) {
       console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Carga reservas canceladas (paginadas)
-  const loadCancelled = async (limit = 10) => {
-    const token = localStorage.getItem("authToken");
-    const adminId = localStorage.getItem("userId");
-    if (!token || !adminId) return;
-
-    setLoadingCancelled(true);
-    try {
-      const res = await fetch(
-        `${BASE}/reservations/admin/cancelled/${adminId}?limit=${limit}&offset=${cancelledOffset}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data: Reservation[] = await res.json();
-      setCancelledReservations(prev => [...prev, ...data]);
-      setCancelledOffset(prev => prev + limit);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingCancelled(false);
     }
   };
 
@@ -146,17 +126,21 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   if (loading) return <Typography>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
-  const filteredPending = searchDate
-    ? pendingReservations.filter(r => r.date.startsWith(searchDate))
-    : pendingReservations;
+  // Comparar solo la fecha (yyyy-mm-dd)
+  const filterByDate = (reservations: Reservation[]) => {
+    return reservations.filter(r => {
+      const resDate = new Date(r.date);
+      const localDateStr =
+        resDate.getFullYear() + "-" +
+        String(resDate.getMonth() + 1).padStart(2, "0") + "-" +
+        String(resDate.getDate()).padStart(2, "0");
+      return localDateStr === searchDate;
+    });
+  };
 
-  const filteredAccepted = searchDate
-    ? acceptedReservations.filter(r => r.date.startsWith(searchDate))
-    : acceptedReservations;
-
-  const filteredCancelled = searchDate
-    ? cancelledReservations.filter(r => r.date.startsWith(searchDate))
-    : cancelledReservations;
+  const filteredPending = filterByDate(pendingReservations);
+  const filteredAccepted = filterByDate(acceptedReservations);
+  const filteredCancelled = filterByDate(cancelledReservations);
 
   const renderReservationCard = (r: Reservation, isAccepted: boolean) => (
     <Card key={r.id} sx={{ borderRadius: 2, p: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
@@ -189,22 +173,23 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         )}
 
         {isAccepted && (
-          <TextField
-            label="Razón de cancelación"
-            placeholder="Motivo de cancelación"
-            size="small"
-            fullWidth
-            sx={{ mb: 1 }}
-            value={localCancelReasons[r.id] || ""}
-            onChange={(e) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
-          />
+          <>
+            <TextField
+              label="Razón de cancelación"
+              placeholder="Motivo de cancelación"
+              size="small"
+              fullWidth
+              sx={{ mb: 1 }}
+              value={localCancelReasons[r.id] || ""}
+              onChange={(e) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
+            />
+            <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleCancel(r.id)}>
+              Cancelar
+            </Button>
+          </>
         )}
 
-        {isAccepted ? (
-          <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleCancel(r.id)}>
-            Cancelar
-          </Button>
-        ) : (
+        {!isAccepted && (
           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
             <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleAction(r.id, "accept")}>
               Aceptar
@@ -256,61 +241,62 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         />
       </Box>
 
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Pendientes</Typography>
-      <Grid container spacing={2} sx={{ mb: 6 }}>
-        {filteredPending.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas pendientes</Typography>}
-        {filteredPending.map(r => (
-          <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
-            {renderReservationCard(r, false)}
+      {/* --- PENDIENTES --- */}
+      <Accordion defaultExpanded sx={{ backgroundColor: "#100f0fff", color: "white" }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Pendientes <Badge badgeContent={filteredPending.length} color="secondary" sx={{ ml: 1 }} />
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            {filteredPending.length === 0 && <Typography>No hay reservas pendientes</Typography>}
+            {filteredPending.map(r => (
+              <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
+                {renderReservationCard(r, false)}
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </AccordionDetails>
+      </Accordion>
 
-      <Divider sx={{ my: 3, borderColor: "white" }} />
-
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Aceptadas</Typography>
-      <Grid container spacing={2}>
-        {filteredAccepted.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas aceptadas</Typography>}
-        {filteredAccepted.map(r => (
-          <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
-            {renderReservationCard(r, true)}
+      {/* --- ACEPTADAS --- */}
+      <Accordion sx={{ backgroundColor: "#100f0fff", color: "white", mt: 2 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Aceptadas <Badge badgeContent={filteredAccepted.length} color="secondary" sx={{ ml: 1 }} />
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            {filteredAccepted.length === 0 && <Typography>No hay reservas aceptadas</Typography>}
+            {filteredAccepted.map(r => (
+              <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
+                {renderReservationCard(r, true)}
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </AccordionDetails>
+      </Accordion>
 
-      <Divider sx={{ my: 3, borderColor: "white" }} />
-
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Canceladas</Typography>
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="contained"
-            sx={{ backgroundColor: "#ff9800" }}
-            onClick={() => setHideCancelled(!hideCancelled)}
-          >
-            {hideCancelled ? "Mostrar canceladas" : "Ocultar canceladas"}
-          </Button>
-          <Button
-            variant="contained"
-            sx={{ backgroundColor: "#ff9800" }}
-            disabled={loadingCancelled}
-            onClick={() => loadCancelled(10)}
-          >
-            {loadingCancelled ? "Cargando..." : "Ver más"}
-          </Button>
-        </Box>
-      </Box>
-
-      {!hideCancelled && (
-        <Grid container spacing={2}>
-          {filteredCancelled.length === 0 && <Typography sx={{ ml: 2 }}>No hay reservas canceladas</Typography>}
-          {filteredCancelled.map(r => (
-            <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
-              {renderCancelledCard(r)}
-            </Grid>
-          ))}
-        </Grid>
-      )}
+      {/* --- CANCELADAS --- */}
+      <Accordion sx={{ backgroundColor: "#100f0fff", color: "white", mt: 2 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "white" }} />}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Canceladas <Badge badgeContent={filteredCancelled.length} color="secondary" sx={{ ml: 1 }} />
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            {filteredCancelled.length === 0 && <Typography>No hay reservas canceladas</Typography>}
+            {filteredCancelled.map(r => (
+              <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
+                {renderCancelledCard(r)}
+              </Grid>
+            ))}
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
     </Container>
   );
 }
