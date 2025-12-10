@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from "react";
 import {
@@ -10,6 +10,18 @@ import {
   Paper,
   Divider
 } from "@mui/material";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface Comment {
   id: string;
@@ -23,19 +35,18 @@ export default function UserProfile() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [reputation, setReputation] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [reservationsPerDay, setReservationsPerDay] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cambia BASE si tu backend corre en otra máquina/puerto
-  const BASE = "http://192.168.1.6:4000";
+  const BASE = "http://192.168.1.6:4000"; // Cambia según tu backend
 
   useEffect(() => {
-    // Primero carga lo que ya haya en localStorage (para que no se vea vacío)
     const localName = localStorage.getItem("userName");
     const localPhoto = localStorage.getItem("userPhoto");
     if (localName) setUserName(localName);
     if (localPhoto) setUserPhoto(localPhoto);
 
-    const token = localStorage.getItem("authToken"); 
+    const token = localStorage.getItem("authToken");
     if (!token) {
       setLoading(false);
       return;
@@ -46,44 +57,63 @@ export default function UserProfile() {
         const res = await fetch(`${BASE}/users/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) {
-          console.warn("No se pudo obtener perfil (status):", res.status);
-          setLoading(false);
-          return;
-        }
+        if (!res.ok) throw new Error("Error al obtener perfil");
 
         const data = await res.json();
 
-        // protege contra payloads inesperados
         if (data?.name) {
           setUserName(data.name);
           localStorage.setItem("userName", data.name);
         }
+
         if (data?.avatar) {
           setUserPhoto(data.avatar);
           localStorage.setItem("userPhoto", data.avatar);
-        } else {
-          // si el backend devuelve null/undefined, borramos la key para evitar inconsistencias
-          if (localStorage.getItem("userPhoto")) {
-            localStorage.removeItem("userPhoto");
-          }
-          setUserPhoto(null);
         }
 
-        setReputation(typeof data.reputation === "number" ? data.reputation : 0);
-        setComments(Array.isArray(data.comments) ? data.comments : []);
+        setReputation(data.reputation ?? 0);
+        setComments(data.comments ?? []);
+
+        // Procesar reservas por día
+        if (data.reservationsLastMonth) {
+          const daysArray = Object.keys(data.reservationsLastMonth).sort();
+          const reservationsArray = daysArray.map(day => data.reservationsLastMonth[day]);
+          setReservationsPerDay(reservationsArray);
+        }
+
       } catch (error) {
-        console.error("Error cargando perfil:", error);
-        // no sobreescribimos localStorage en error de red
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const chartData = {
+    labels: reservationsPerDay.map((_, i) => `${i + 1}`),
+    datasets: [
+      {
+        label: "Reservas del último mes",
+        data: reservationsPerDay,
+        backgroundColor: "rgba(75, 192, 192, 0.6)",
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "top" as const },
+      title: { display: false },
+    },
+    scales: {
+      x: {
+        ticks: { maxRotation: 0, minRotation: 0 }, // etiquetas horizontales
+      },
+    },
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 2 }}>
@@ -114,6 +144,16 @@ export default function UserProfile() {
 
       <Divider />
 
+      {/* Gráfico de reservas */}
+      <Box>
+        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+          Reservas del último mes
+        </Typography>
+        <Bar data={chartData} options={chartOptions} />
+      </Box>
+
+      <Divider />
+
       {/* Comentarios */}
       <Box>
         <Typography variant="subtitle1" sx={{ mb: 1 }}>
@@ -121,7 +161,6 @@ export default function UserProfile() {
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {comments.length === 0 && <Typography variant="body2">No hay comentarios</Typography>}
-
           {comments.map((c) => (
             <Paper key={c.id} sx={{ p: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
