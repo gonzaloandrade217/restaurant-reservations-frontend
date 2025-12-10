@@ -8,8 +8,6 @@ import {
   Typography,
   Box,
   IconButton,
-  Menu,
-  MenuItem,
   Avatar,
   Snackbar,
   Alert,
@@ -23,6 +21,7 @@ import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import { useRouter } from "next/navigation";
 import { useMediaQuery } from "@mui/material";
+import UserProfile from "./UserProfile"; 
 
 interface NavbarProps {
   section: "restaurantes" | "reservas";
@@ -33,9 +32,6 @@ interface NavbarProps {
 export default function Navbar({ section, setSection, newNotification = false }: NavbarProps) {
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width:600px)");
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const openMenu = Boolean(anchorEl);
-
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("Usuario");
 
@@ -44,6 +40,7 @@ export default function Navbar({ section, setSection, newNotification = false }:
   const [alertSeverity, setAlertSeverity] = useState<"success" | "error" | "info">("info");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false); 
 
   useEffect(() => {
     const avatar = localStorage.getItem("userPhoto");
@@ -51,9 +48,6 @@ export default function Navbar({ section, setSection, newNotification = false }:
     if (avatar) setUserPhoto(avatar);
     if (name) setUserName(name);
   }, []);
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
 
   const logout = () => {
     localStorage.clear();
@@ -150,21 +144,27 @@ export default function Navbar({ section, setSection, newNotification = false }:
 
         <Box sx={{ flexGrow: 1 }} />
 
-        <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
+        {/* Avatar que abre el perfil */}
+        <IconButton onClick={() => setProfileOpen(true)} sx={{ p: 0 }}>
           <Avatar
             src={userPhoto || undefined}
             sx={{ width: 36, height: 36, bgcolor: userPhoto ? undefined : "gray" }}
           />
         </IconButton>
-
-        <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose}>
-          <MenuItem sx={{ pointerEvents: 'none', color: 'black', fontWeight: 'bold' }}>{userName}</MenuItem>
-          <MenuItem onClick={logout}>Cerrar sesión</MenuItem>
-          <MenuItem onClick={() => setConfirmOpen(true)} sx={{ color: "red" }}>
-            Eliminar cuenta
-          </MenuItem>
-        </Menu>
       </Paper>
+
+      {/* ----- DIALOG PERFIL USUARIO ----- */}
+      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} maxWidth="sm" fullWidth>
+        <DialogContent>
+          <UserProfile />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={logout}>Cerrar sesión</Button>
+          <Button onClick={() => setConfirmOpen(true)} color="error">
+            Eliminar cuenta
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ----- DIALOG CONFIRMACIÓN ----- */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
