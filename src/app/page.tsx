@@ -1,10 +1,31 @@
-'use client';
+"use client";
 
+import { useEffect } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import UserFormSwitcher from "./users/user-form-switcher";
 
 export default function HomePage() {
   const isMobile = useMediaQuery("(max-width:600px)");
+  const router = useRouter();
+  const { isLoggedIn, userRole, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (isLoggedIn) {
+      if (userRole === "ADMIN") {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/users/pages");
+      }
+    }
+  }, [isLoggedIn, userRole, loading, router]);
+
+  if (loading || isLoggedIn) {
+    return null;
+  }
 
   return (
     <Box
@@ -14,14 +35,14 @@ export default function HomePage() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#121212", 
+        backgroundColor: "#121212",
         color: "white",
         px: 2,
-        py: isMobile ? 2 : 4, // menos padding vertical en móviles
+        py: isMobile ? 2 : 4,
       }}
     >
-      <Typography 
-        variant={isMobile ? "h4" : "h3"} // título más pequeño en móviles
+      <Typography
+        variant={isMobile ? "h4" : "h3"}
         gutterBottom
         sx={{ textAlign: "center", mb: isMobile ? 2 : 4 }}
       >

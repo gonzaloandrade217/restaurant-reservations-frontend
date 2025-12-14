@@ -22,10 +22,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar token y rol al iniciar la app
   useEffect(() => {
     const storedToken = localStorage.getItem("authToken");
-    const storedRole = localStorage.getItem("userRole") as Role;
+    const storedRole = localStorage.getItem("userRole") as Role | null;
 
     if (storedToken && storedRole) {
       setToken(storedToken);
@@ -35,28 +34,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(false);
   }, []);
 
-  // LOGIN — Guarda token + rol y emite el evento global
   const login = (authToken: string, userRole: Role) => {
     localStorage.setItem("authToken", authToken);
     localStorage.setItem("userRole", userRole);
 
-    // Notifica a toda la app que el token cambió
     window.dispatchEvent(new Event("authTokenUpdated"));
 
     setToken(authToken);
     setRole(userRole);
   };
 
-  // LOGOUT
   const logout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
 
-    window.dispatchEvent(new Event("authTokenUpdated")); // opcional pero recomendado
+    window.dispatchEvent(new Event("authTokenUpdated"));
 
     setToken(null);
     setRole(null);
   };
+
+  if (loading) {
+    return null; 
+  }
 
   return (
     <AuthContext.Provider
