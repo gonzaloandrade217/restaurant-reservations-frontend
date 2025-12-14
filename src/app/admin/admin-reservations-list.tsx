@@ -24,13 +24,15 @@ interface Reservation {
   restaurant: { name: string };
   user: { name: string; email: string };
   cancelReason?: string;
+  completed?: boolean;
 }
 
 interface AdminReservationsListProps {
   refresh: number;
+  onComplete?: (reservation: Reservation) => void; // <-- prop para notificar completadas
 }
 
-export default function AdminReservationsList({ refresh }: AdminReservationsListProps) {
+export default function AdminReservationsList({ refresh, onComplete }: AdminReservationsListProps) {
   const [pendingReservations, setPendingReservations] = useState<Reservation[]>([]);
   const [acceptedReservations, setAcceptedReservations] = useState<Reservation[]>([]);
   const [cancelledReservations, setCancelledReservations] = useState<Reservation[]>([]);
@@ -40,13 +42,11 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
   const [localCancelReasons, setLocalCancelReasons] = useState<{ [id: string]: string }>({});
   const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
 
-  // Por defecto, mostrar reservas del día actual
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const dd = String(today.getDate()).padStart(2, "0");
-  const defaultDate = `${yyyy}-${mm}-${dd}`;
-  const [searchDate, setSearchDate] = useState(defaultDate);
+  const [searchDate, setSearchDate] = useState(`${yyyy}-${mm}-${dd}`);
 
   const BASE = "http://192.168.1.6:4000";
 
@@ -123,12 +123,30 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
     if (res.ok) loadReservations();
   };
 
+  const handleCompleted = async (id: string, completed: boolean) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    const res = await fetch(`${BASE}/reservations/${id}/completed`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ completed }),
+    });
+
+    if (res.ok) {
+      const updatedReservation = acceptedReservations.find(r => r.id === id);
+      if (completed && updatedReservation && onComplete) {
+        onComplete(updatedReservation); 
+      }
+      loadReservations();
+    }
+  };
+
   if (loading) return <Typography>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
-  // Comparar solo la fecha (yyyy-mm-dd)
-  const filterByDate = (reservations: Reservation[]) => {
-    return reservations.filter(r => {
+  const filterByDate = (reservations: Reservation[]) =>
+    reservations.filter(r => {
       const resDate = new Date(r.date);
       const localDateStr =
         resDate.getFullYear() + "-" +
@@ -136,7 +154,6 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
         String(resDate.getDate()).padStart(2, "0");
       return localDateStr === searchDate;
     });
-  };
 
   const filteredPending = filterByDate(pendingReservations);
   const filteredAccepted = filterByDate(acceptedReservations);
@@ -183,9 +200,25 @@ export default function AdminReservationsList({ refresh }: AdminReservationsList
               value={localCancelReasons[r.id] || ""}
               onChange={(e) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: e.target.value }))}
             />
-            <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleCancel(r.id)}>
-              Cancelar
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleCancel(r.id)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                sx={{ backgroundColor: "#4caf50" }}
+                onClick={() => handleCompleted(r.id, true)}
+              >
+                Completada
+              </Button>
+              <Button
+                variant="contained"
+                sx={{ backgroundColor: "#f44336" }}
+                onClick={() => handleCompleted(r.id, false)}
+              >
+                Incumplida
+              </Button>
+            </Box>
           </>
         )}
 

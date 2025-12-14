@@ -20,6 +20,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import ReservationsSection from "./ReservationsSection";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -35,7 +36,7 @@ export default function UserProfile() {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [reputation, setReputation] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [reservationsPerDay, setReservationsPerDay] = useState<number[]>([]);
+  const [completedReservations, setCompletedReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const BASE = "http://192.168.1.6:4000"; // Cambia según tu backend
@@ -74,13 +75,6 @@ export default function UserProfile() {
         setReputation(data.reputation ?? 0);
         setComments(data.comments ?? []);
 
-        // Procesar reservas por día
-        if (data.reservationsLastMonth) {
-          const daysArray = Object.keys(data.reservationsLastMonth).sort();
-          const reservationsArray = daysArray.map(day => data.reservationsLastMonth[day]);
-          setReservationsPerDay(reservationsArray);
-        }
-
       } catch (error) {
         console.error(error);
       } finally {
@@ -91,12 +85,25 @@ export default function UserProfile() {
     fetchProfile();
   }, []);
 
-  const chartData = {
-    labels: reservationsPerDay.map((_, i) => `${i + 1}`),
+  // Recibe reservas completadas desde ReservationsSection
+  const handleReservationsUpdate = (reservations: any[]) => {
+    const completed = reservations.filter(r => r.status === "COMPLETED");
+    setCompletedReservations(completed);
+  };
+
+  // Preparar datos para gráfico de reservas completadas por restaurante
+  const restaurantCounts: Record<string, number> = {};
+  completedReservations.forEach(r => {
+    const name = r.restaurant?.name || "Desconocido";
+    restaurantCounts[name] = (restaurantCounts[name] || 0) + 1;
+  });
+
+  const completedChartData = {
+    labels: Object.keys(restaurantCounts),
     datasets: [
       {
-        label: "Reservas del último mes",
-        data: reservationsPerDay,
+        label: "Reservas Completadas",
+        data: Object.values(restaurantCounts),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
       },
     ],
@@ -110,7 +117,7 @@ export default function UserProfile() {
     },
     scales: {
       x: {
-        ticks: { maxRotation: 0, minRotation: 0 }, // etiquetas horizontales
+        ticks: { maxRotation: 0, minRotation: 0 },
       },
     },
   };
@@ -144,12 +151,12 @@ export default function UserProfile() {
 
       <Divider />
 
-      {/* Gráfico de reservas */}
+      {/* Gráfico de reservas completadas por restaurante */}
       <Box>
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
-          Reservas del último mes
+          Reservas Completadas por Restaurante
         </Typography>
-        <Bar data={chartData} options={chartOptions} />
+        <Bar data={completedChartData} options={chartOptions} />
       </Box>
 
       <Divider />
@@ -172,6 +179,9 @@ export default function UserProfile() {
           ))}
         </Box>
       </Box>
+
+      {/* MUY IMPORTANTE: sección de reservas */}
+      <ReservationsSection onUpdate={handleReservationsUpdate} />
     </Box>
   );
 }

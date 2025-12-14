@@ -87,6 +87,7 @@ export default function ReservationsSection({ onUpdate }: Props) {
     if (status === "ACCEPTED") return "Aceptada";
     if (status === "REJECTED") return "Rechazada";
     if (status === "CANCELLED") return "Cancelada";
+    if (status === "COMPLETED") return "Completada";
     return "Pendiente";
   };
 
@@ -94,6 +95,7 @@ export default function ReservationsSection({ onUpdate }: Props) {
     if (status === "ACCEPTED") return "green";
     if (status === "REJECTED") return "red";
     if (status === "CANCELLED") return "gray";
+    if (status === "COMPLETED") return "blue";
     return "orange";
   };
 

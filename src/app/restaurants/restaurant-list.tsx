@@ -37,20 +37,36 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
     setError(null);
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-      const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('authToken')
+          : null;
+      const role =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('userRole')
+          : null;
 
-      if (!token) throw new Error('No se encontró token. Iniciá sesión como ADMIN.');
-      if (role !== 'ADMIN') throw new Error('Necesitás ser ADMIN para ver la lista de restaurantes.');
+      if (!token)
+        throw new Error('No se encontró token. Iniciá sesión como ADMIN.');
+      if (role !== 'ADMIN')
+        throw new Error(
+          'Necesitás ser ADMIN para ver la lista de restaurantes.'
+        );
 
-      const response = await fetch('http://192.168.1.6:4000/restaurants', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        'http://192.168.1.6:4000/restaurants?admin=true',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (!response.ok) throw new Error(`Error al cargar restaurantes (${response.status})`);
+      if (!response.ok)
+        throw new Error(
+          `Error al cargar restaurantes (${response.status})`
+        );
 
       const data = await response.json();
       setRestaurants(data);
@@ -66,21 +82,26 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
   }, [refresh]);
 
   const handleDelete = async (id: string) => {
-    const confirmDelete = window.confirm("¿Seguro que querés eliminar este restaurante?");
+    const confirmDelete = window.confirm(
+      '¿Seguro que querés eliminar este restaurante?'
+    );
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) throw new Error("No hay token");
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('No hay token');
 
-      const res = await fetch(`http://192.168.1.6:4000/restaurants/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `http://192.168.1.6:4000/restaurants/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (!res.ok) throw new Error("Error eliminando restaurante");
+      if (!res.ok) throw new Error('Error eliminando restaurante');
 
       setRestaurants((prev) => prev.filter((r) => r.id !== id));
     } catch (err: any) {
@@ -118,86 +139,100 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Grid container spacing={2}>
+      <Grid container spacing={3}>
         {restaurants.map((r) => (
           <Grid key={r.id} item xs={12} sm={6} md={4} lg={3}>
             <Card
               sx={{
+                width: 300,
+                height: 370,
                 borderRadius: 2,
-                p: 1,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                 transition: '0.2s',
+                display: 'flex',
+                flexDirection: 'column',
                 ':hover': { transform: 'scale(1.02)' },
               }}
             >
-              <CardContent>
+              <CardContent
+                sx={{
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
                 <Typography variant="subtitle2" color="text.secondary">
-                  Nombre:
+                  Nombre
                 </Typography>
-                <Typography variant="body1" sx={{ mb: 1, fontWeight: 600 }}>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    mb: 1,
+                    fontWeight: 600,
+                    wordBreak: 'break-word',
+                    whiteSpace: 'normal',
+                  }}
+                >
                   {r.name}
                 </Typography>
 
                 <Typography variant="subtitle2" color="text.secondary">
-                  Dirección:
+                  Dirección
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {r.address}
                 </Typography>
 
                 <Typography variant="subtitle2" color="text.secondary">
-                  Teléfono:
+                  Teléfono
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {r.phone}
                 </Typography>
 
                 <Typography variant="subtitle2" color="text.secondary">
-                  Capacidad:
+                  Capacidad
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {r.capacity}
                 </Typography>
 
                 <Typography variant="subtitle2" color="text.secondary">
-                  Mesas:
+                  Mesas
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {r.cantidadMesas}
                 </Typography>
 
-                <Typography variant="subtitle2" color="text.secondary">
-                  Descripción:
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  {r.description || '-'}
-                </Typography>
+                {/* BOTONES FIJOS */}
+                <Box>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() =>
+                      router.push(`/restaurants/edit/${r.id}`)
+                    }
+                    sx={{
+                      mb: 1,
+                      bgcolor: '#ff9800',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      ':hover': { bgcolor: '#9f6815ff' },
+                    }}
+                  >
+                    Editar
+                  </Button>
 
-                {/* BOTÓN EDITAR - AHORA NARANJA */}
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => router.push(`/restaurants/edit/${r.id}`)}
-                  sx={{
-                    mb: 1,
-                    bgcolor: "#ff9800",
-                    color: "white",
-                    fontWeight: "bold",
-                    ":hover": { bgcolor: "#9f6815ff" },
-                  }}
-                >
-                  Editar
-                </Button>
-
-                {/* BOTÓN ELIMINAR */}
-                <Button
-                  variant="contained"
-                  color="error"
-                  fullWidth
-                  onClick={() => handleDelete(r.id)}
-                >
-                  Eliminar
-                </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    fullWidth
+                    onClick={() => handleDelete(r.id)}
+                  >
+                    Eliminar
+                  </Button>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
