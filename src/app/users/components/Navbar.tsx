@@ -161,12 +161,6 @@ export default function Navbar({ section, setSection, newNotification = false }:
         <DialogContent>
           <UserProfile />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLogout}>Cerrar sesión</Button>
-          <Button onClick={() => setConfirmOpen(true)} color="error">
-            Eliminar cuenta
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* ----- DIALOG CONFIRMACIÓN ----- */}

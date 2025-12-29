@@ -8,8 +8,18 @@ import {
   LinearProgress,
   Rating,
   Paper,
-  Divider
+  Divider,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { useRouter } from "next/navigation";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -32,6 +42,8 @@ interface Comment {
 }
 
 export default function UserProfile() {
+  const router = useRouter();
+
   const [userName, setUserName] = useState("Usuario");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [reputation, setReputation] = useState(0);
@@ -39,7 +51,15 @@ export default function UserProfile() {
   const [completedReservations, setCompletedReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE = process.env.NEXT_PUBLIC_API_URL!; 
+  // menú
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(anchorEl);
+
+  // dialogs
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+
+  const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
   useEffect(() => {
     const localName = localStorage.getItem("userName");
@@ -52,8 +72,6 @@ export default function UserProfile() {
       setLoading(false);
       return;
     }
-
-    console.log("TOKEN:", token);
 
     const fetchProfile = async () => {
       try {
@@ -76,7 +94,6 @@ export default function UserProfile() {
 
         setReputation(data.reputation ?? 0);
         setComments(data.comments ?? []);
-
       } catch (error) {
         console.error(error);
       } finally {
@@ -85,15 +102,15 @@ export default function UserProfile() {
     };
 
     fetchProfile();
-  }, []);
+  }, [BASE]);
 
-  // Recibe reservas completadas desde ReservationsSection
+  // === SOLO para alimentar el gráfico ===
   const handleReservationsUpdate = (reservations: any[]) => {
     const completed = reservations.filter(r => r.status === "COMPLETED");
     setCompletedReservations(completed);
   };
 
-  // Preparar datos para gráfico de reservas completadas por restaurante
+  // === Gráfico ===
   const restaurantCounts: Record<string, number> = {};
   completedReservations.forEach(r => {
     const name = r.restaurant?.name || "Desconocido";
@@ -124,6 +141,42 @@ export default function UserProfile() {
     },
   };
 
+  // === Menú ===
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteDialogOpen(false);
+    handleMenuClose();
+
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${BASE}/users/me`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error();
+
+      localStorage.clear();
+      router.push("/register");
+    } catch {
+      setErrorDialogOpen(true);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ py: 4 }}>
@@ -134,13 +187,41 @@ export default function UserProfile() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 2 }}>
-      {/* Avatar + nombre */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <Avatar
-          src={userPhoto || undefined}
-          sx={{ width: 64, height: 64, bgcolor: userPhoto ? undefined : "gray" }}
-        />
-        <Typography variant="h6">{userName}</Typography>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Avatar
+            src={userPhoto || undefined}
+            sx={{ width: 64, height: 64, bgcolor: userPhoto ? undefined : "gray" }}
+          />
+          <Typography variant="h6">{userName}</Typography>
+        </Box>
+
+        <IconButton onClick={handleMenuOpen}>
+          <MoreVertIcon />
+        </IconButton>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={menuOpen}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "right",
+          }}
+        >
+          <MenuItem onClick={handleLogout}>Cerrar sesión</MenuItem>
+          <MenuItem
+            sx={{ color: "error.main" }}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Eliminar cuenta
+          </MenuItem>
+        </Menu>
       </Box>
 
       {/* Reputación */}
@@ -161,7 +242,7 @@ export default function UserProfile() {
 
       <Divider />
 
-      {/* Gráfico de reservas completadas por restaurante */}
+      {/* Gráfico */}
       <Box>
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
           Reservas Completadas por Restaurante
@@ -177,10 +258,12 @@ export default function UserProfile() {
           Comentarios
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {comments.length === 0 && <Typography variant="body2">No hay comentarios</Typography>}
+          {comments.length === 0 && (
+            <Typography variant="body2">No hay comentarios</Typography>
+          )}
           {comments.map((c) => (
             <Paper key={c.id} sx={{ p: 2 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+              <Typography variant="subtitle2" fontWeight="bold">
                 {c.restaurantName}
               </Typography>
               <Rating value={c.rating} readOnly size="small" sx={{ mb: 1 }} />
@@ -190,8 +273,33 @@ export default function UserProfile() {
         </Box>
       </Box>
 
-      {/* MUY IMPORTANTE: sección de reservas */}
-      <ReservationsSection onUpdate={handleReservationsUpdate} />
+      {/* SOLO para alimentar el gráfico */}
+      <Box sx={{ display: "none" }}>
+        <ReservationsSection onUpdate={handleReservationsUpdate} />
+      </Box>
+      
+      {/* Dialog eliminar */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Eliminar cuenta</DialogTitle>
+        <DialogContent>
+          ¿Estás seguro? Esta acción no se puede deshacer.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button color="error" onClick={handleDeleteAccount}>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog error */}
+      <Dialog open={errorDialogOpen} onClose={() => setErrorDialogOpen(false)}>
+        <DialogTitle>Error</DialogTitle>
+        <DialogContent>No se pudo eliminar la cuenta.</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setErrorDialogOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
