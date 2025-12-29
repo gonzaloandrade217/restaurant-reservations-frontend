@@ -18,7 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import RestaurantReviewForm from "@/app/restaurants/restaurant-review-form";
 
-const API = "http://192.168.1.6:4000";
+const API = "NEXT_PUBLIC_API_URL" in process.env ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000";
 
 interface Restaurant {
   id: string;

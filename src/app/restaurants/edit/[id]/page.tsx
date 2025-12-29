@@ -32,7 +32,7 @@ export default function EditRestaurantPage() {
     const loadData = async () => {
       const token = localStorage.getItem("authToken");
 
-      const res = await fetch(`http://192.168.1.6:4000/restaurants/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -82,7 +82,7 @@ export default function EditRestaurantPage() {
         : null,
     };
 
-    const res = await fetch(`http://192.168.1.6:4000/restaurants/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants/${id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

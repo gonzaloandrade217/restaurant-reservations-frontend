@@ -61,7 +61,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No se encontró el token.");
 
-      const response = await fetch("http://192.168.1.6:4000/restaurants", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

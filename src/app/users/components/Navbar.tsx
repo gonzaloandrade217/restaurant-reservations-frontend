@@ -22,6 +22,7 @@ import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import { useRouter } from "next/navigation";
 import { useMediaQuery } from "@mui/material";
 import UserProfile from "./UserProfile"; 
+import { useAuth } from "../../../context/AuthContext";
 
 interface NavbarProps {
   section: "restaurantes" | "reservas";
@@ -49,9 +50,11 @@ export default function Navbar({ section, setSection, newNotification = false }:
     if (name) setUserName(name);
   }, []);
 
-  const logout = () => {
-    localStorage.clear();
-    router.push("/");
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
   };
 
   const deleteAccount = async () => {
@@ -60,7 +63,7 @@ export default function Navbar({ section, setSection, newNotification = false }:
       const userId = localStorage.getItem("userId");
       if (!token || !userId) throw new Error("No autenticado");
 
-      const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -159,7 +162,7 @@ export default function Navbar({ section, setSection, newNotification = false }:
           <UserProfile />
         </DialogContent>
         <DialogActions>
-          <Button onClick={logout}>Cerrar sesión</Button>
+          <Button onClick={handleLogout}>Cerrar sesión</Button>
           <Button onClick={() => setConfirmOpen(true)} color="error">
             Eliminar cuenta
           </Button>

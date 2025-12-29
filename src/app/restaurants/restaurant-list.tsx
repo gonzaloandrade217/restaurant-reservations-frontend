@@ -54,7 +54,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
         );
 
       const response = await fetch(
-        'http://192.168.1.6:4000/restaurants?admin=true',
+        `${process.env.NEXT_PUBLIC_API_URL}/restaurants?admin=true`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -92,7 +92,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
       if (!token) throw new Error('No hay token');
 
       const res = await fetch(
-        `http://192.168.1.6:4000/restaurants/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/restaurants/${id}`,
         {
           method: 'DELETE',
           headers: {

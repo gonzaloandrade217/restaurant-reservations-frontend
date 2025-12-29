@@ -48,7 +48,7 @@ export default function UserList({ refresh }: UserListProps) {
         throw new Error('Necesitás ser ADMIN para ver la lista de usuarios.');
 
       const response = await fetch(
-        'http://192.168.1.6:4000/users/with-reservations',
+        `${process.env.NEXT_PUBLIC_API_URL}/users/with-reservations`,
         {
           headers: {
             'Content-Type': 'application/json',

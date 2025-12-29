@@ -39,7 +39,7 @@ export default function UserProfile() {
   const [completedReservations, setCompletedReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const BASE = "http://192.168.1.6:4000"; // Cambia según tu backend
+  const BASE = process.env.NEXT_PUBLIC_API_URL!; 
 
   useEffect(() => {
     const localName = localStorage.getItem("userName");
@@ -52,6 +52,8 @@ export default function UserProfile() {
       setLoading(false);
       return;
     }
+
+    console.log("TOKEN:", token);
 
     const fetchProfile = async () => {
       try {
@@ -121,6 +123,14 @@ export default function UserProfile() {
       },
     },
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ py: 4 }}>
+        <Typography>Cargando perfil...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, py: 2 }}>

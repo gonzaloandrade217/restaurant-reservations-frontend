@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Box, Typography, useMediaQuery } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import UserFormSwitcher from "./users/user-form-switcher";
 
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false);
+
   const isMobile = useMediaQuery("(max-width:600px)");
   const router = useRouter();
   const { isLoggedIn, userRole, loading } = useAuth();
 
   useEffect(() => {
-    if (loading) return;
+    setMounted(true);
+  }, []);
+
+  // Redirección solo en cliente
+  useEffect(() => {
+    if (!mounted || loading) return;
 
     if (isLoggedIn) {
       if (userRole === "ADMIN") {
@@ -21,9 +28,9 @@ export default function HomePage() {
         router.replace("/users/pages");
       }
     }
-  }, [isLoggedIn, userRole, loading, router]);
+  }, [mounted, loading, isLoggedIn, userRole, router]);
 
-  if (loading || isLoggedIn) {
+  if (!mounted || loading || isLoggedIn) {
     return null;
   }
 

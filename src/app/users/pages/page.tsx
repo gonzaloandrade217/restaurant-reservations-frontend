@@ -11,7 +11,7 @@ import ReservationsSection from "../components/ReservationsSection";
 import RestaurantsSection from "../components/RestaurantsSection";
 import UserMap from "../components/UserMap";
 
-const API = "http://192.168.1.6:4000";
+const API = "NEXT_PUBLIC_API_URL" in process.env ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000";
 
 export default function UsersDashboardPage() {
   const [section, setSection] = useState<"restaurantes" | "reservas">("restaurantes");

@@ -61,7 +61,7 @@ export default function UserFormSwitcher() {
     if (isLogin) {
       // LOGIN NORMAL
       try {
-        const res = await fetch("http://192.168.1.6:4000/users/login", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -97,7 +97,7 @@ export default function UserFormSwitcher() {
 
     try {
       // Crear usuario
-      const response = await fetch("http://192.168.1.6:4000/users", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -114,7 +114,7 @@ export default function UserFormSwitcher() {
       }
 
       // Usuario creado, ahora login automático con el mismo email y password
-      const loginRes = await fetch("http://192.168.1.6:4000/users/login", {
+      const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -146,7 +146,7 @@ export default function UserFormSwitcher() {
     const idToken = response.credential;
 
     try {
-      const res = await fetch("http://192.168.1.6:4000/auth/google", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

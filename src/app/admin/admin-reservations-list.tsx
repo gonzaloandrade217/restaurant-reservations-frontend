@@ -48,7 +48,7 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
   const dd = String(today.getDate()).padStart(2, "0");
   const [searchDate, setSearchDate] = useState(`${yyyy}-${mm}-${dd}`);
 
-  const BASE = "http://192.168.1.6:4000";
+  const BASE = process.env.NEXT_PUBLIC_API_URL;
 
   const loadReservations = async () => {
     const token = localStorage.getItem("authToken");

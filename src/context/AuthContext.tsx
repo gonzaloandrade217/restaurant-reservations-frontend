@@ -15,14 +15,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const storedToken = localStorage.getItem("authToken");
     const storedRole = localStorage.getItem("userRole") as Role | null;
 
@@ -38,8 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("authToken", authToken);
     localStorage.setItem("userRole", userRole);
 
-    window.dispatchEvent(new Event("authTokenUpdated"));
-
     setToken(authToken);
     setRole(userRole);
   };
@@ -48,15 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("authToken");
     localStorage.removeItem("userRole");
 
-    window.dispatchEvent(new Event("authTokenUpdated"));
-
     setToken(null);
     setRole(null);
   };
-
-  if (loading) {
-    return null; 
-  }
 
   return (
     <AuthContext.Provider

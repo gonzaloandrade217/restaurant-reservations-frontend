@@ -45,7 +45,7 @@ export default function RestaurantReviewForm({ restaurantId, onSuccess, onNewRev
 
     setLoading(true);
     try {
-      const res = await fetch(`http://192.168.1.6:4000/reviews`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

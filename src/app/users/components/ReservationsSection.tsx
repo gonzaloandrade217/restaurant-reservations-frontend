@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Box, Card, Typography, Button, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-const API = "http://192.168.1.6:4000";
+const API = "NEXT_PUBLIC_API_URL" in process.env ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000";
 
 interface Props {
   onUpdate?: (data: any[], hasStateChanged: boolean) => void;

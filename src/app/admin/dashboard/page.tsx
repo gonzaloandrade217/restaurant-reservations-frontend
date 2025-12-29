@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
         if (!adminId) return;
 
         const pendingRes = await fetch(
-          `http://192.168.1.6:4000/reservations/admin/pending/${adminId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/reservations/admin/pending/${adminId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (pendingRes.ok) {
@@ -101,7 +101,7 @@ export default function AdminDashboardPage() {
         }
 
         const canceledRes = await fetch(
-          `http://192.168.1.6:4000/reservations/admin/cancelled/${adminId}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/reservations/admin/cancelled/${adminId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (canceledRes.ok) {
@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
       const userId = localStorage.getItem("userId");
       if (!userId) return;
 
-      const res = await fetch(`http://192.168.1.6:4000/users/${userId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
