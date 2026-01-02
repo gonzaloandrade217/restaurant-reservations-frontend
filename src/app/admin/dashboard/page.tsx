@@ -79,10 +79,11 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!token) {
-    router.push("/");
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && !token) {
+      router.replace("/login"); 
+    }
+  }, [token, loading, router]);
 
   useEffect(() => {
     const fetchReservations = async () => {
@@ -135,7 +136,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/");
+    router.replace("/login");
   };
 
   const handleDeleteAccount = async () => {

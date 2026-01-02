@@ -4,7 +4,10 @@ import React, { useEffect, useState, useRef } from "react";
 import { Box, Card, Typography, Button, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
-const API = "NEXT_PUBLIC_API_URL" in process.env ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000";
+const API =
+  "NEXT_PUBLIC_API_URL" in process.env
+    ? process.env.NEXT_PUBLIC_API_URL
+    : "http://localhost:4000";
 
 interface Props {
   onUpdate?: (data: any[], hasStateChanged: boolean) => void;
@@ -12,26 +15,61 @@ interface Props {
 
 export default function ReservationsSection({ onUpdate }: Props) {
   const [reservations, setReservations] = useState<any[]>([]);
+  const [hiddenReservations, setHiddenReservations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hiddenReservations, setHiddenReservations] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("hiddenReservations") || "[]");
-    } catch {
-      return [];
-    }
-  });
 
   const previousReservationsRef = useRef<any[]>([]);
 
-  const hideReservation = (id: string) => {
-    setHiddenReservations(prev => {
-      const updated = [...prev, id];
-      localStorage.setItem("hiddenReservations", JSON.stringify(updated));
-      return updated;
-    });
+  /* ===============================
+     OCULTAR RESERVA (PERSISTENTE)
+     =============================== */
+  const hideReservation = async (id: string) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("No autenticado.");
+
+      const res = await fetch(`${API}/users/me/hidden-reservations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reservationId: id }),
+      });
+
+      if (!res.ok) throw new Error("No se pudo ocultar la reserva");
+
+      setHiddenReservations(prev => [...prev, id]);
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
+  /* ===============================
+     FETCH RESERVAS OCULTAS
+     =============================== */
+  const fetchHiddenReservations = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      const res = await fetch(`${API}/users/me/hidden-reservations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setHiddenReservations(data);
+      }
+    } catch {
+      // silencioso
+    }
+  };
+
+  /* ===============================
+     FETCH RESERVAS
+     =============================== */
   const fetchReservations = async () => {
     try {
       const token = localStorage.getItem("authToken");
@@ -46,18 +84,16 @@ export default function ReservationsSection({ onUpdate }: Props) {
 
       const data: any[] = await res.json();
 
-      // Detecta cambios de estado
       const previous = previousReservationsRef.current;
       const hasStateChanged = data.some(r => {
         const prev = previous.find(p => p.id === r.id);
         return prev && prev.status !== r.status;
       });
 
-      // Solo actualizar si cambió algo
       if (JSON.stringify(previous) !== JSON.stringify(data)) {
         previousReservationsRef.current = data;
         setReservations(data);
-        if (onUpdate) onUpdate(data, hasStateChanged);
+        onUpdate?.(data, hasStateChanged);
       }
     } catch (err: any) {
       setError(err.message);
@@ -66,12 +102,20 @@ export default function ReservationsSection({ onUpdate }: Props) {
     }
   };
 
+  /* ===============================
+     INIT
+     =============================== */
   useEffect(() => {
+    fetchHiddenReservations();
     fetchReservations();
+
     const interval = setInterval(fetchReservations, 5000);
     return () => clearInterval(interval);
-  }, []); 
+  }, []);
 
+  /* ===============================
+     HELPERS
+     =============================== */
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleString("es-AR", {
@@ -99,6 +143,9 @@ export default function ReservationsSection({ onUpdate }: Props) {
     return "orange";
   };
 
+  /* ===============================
+     CANCELAR RESERVA
+     =============================== */
   const cancelReservation = async (reservationId: string) => {
     if (!confirm("¿Cancelar reserva?")) return;
 
@@ -106,33 +153,48 @@ export default function ReservationsSection({ onUpdate }: Props) {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No autenticado.");
 
-      const res = await fetch(`${API}/reservations/${reservationId}/cancel-user`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${API}/reservations/${reservationId}/cancel-user`,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (!res.ok) throw new Error("Error al cancelar reserva");
 
       alert("Reserva cancelada.");
       setReservations(prev =>
-        prev.map(r => (r.id === reservationId ? { ...r, status: "CANCELLED" } : r))
+        prev.map(r =>
+          r.id === reservationId ? { ...r, status: "CANCELLED" } : r
+        )
       );
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  if (loading) return <Typography sx={{ color: "white" }}>Cargando reservas...</Typography>;
+  /* ===============================
+     RENDER
+     =============================== */
+  if (loading)
+    return <Typography sx={{ color: "white" }}>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
   return (
     <Box display="grid" gap={2}>
       {reservations
         .filter(r => !hiddenReservations.includes(r.id))
-        .map((r) => (
+        .map(r => (
           <Card
             key={r.id}
-            sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", p: 2, position: "relative" }}
+            sx={{
+              backgroundColor: "#111",
+              color: "white",
+              border: "1px solid white",
+              p: 2,
+              position: "relative",
+            }}
           >
             {(r.status === "REJECTED" || r.status === "CANCELLED") && (
               <IconButton
@@ -143,17 +205,23 @@ export default function ReservationsSection({ onUpdate }: Props) {
               </IconButton>
             )}
 
-            <Typography variant="h6">Restaurante: {r.restaurant?.name}</Typography>
+            <Typography variant="h6">
+              Restaurante: {r.restaurant?.name}
+            </Typography>
             <Typography>Fecha: {formatDate(r.date)}</Typography>
             <Typography>Personas: {r.partySize}</Typography>
 
             {r.cancelReason && (
-              <Typography sx={{ mt: 1, fontStyle: "italic", color: "#ff6b6b" }}>
+              <Typography
+                sx={{ mt: 1, fontStyle: "italic", color: "#ff6b6b" }}
+              >
                 Razón de cancelación: {r.cancelReason}
               </Typography>
             )}
 
-            <Typography sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}>
+            <Typography
+              sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}
+            >
               {translateStatus(r.status)}
             </Typography>
 
