@@ -139,7 +139,14 @@ export default function UsersDashboardPage() {
 
           <RestaurantsSection search={search} />
 
-          <Box sx={{ mt: 4, height: 400 }}>
+          <Box
+            sx={{
+              mt: 4,
+              height: 400,
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
             {typeof window !== "undefined" && <UserMap restaurants={restaurantsForMap} />}
           </Box>
         </>
@@ -158,6 +165,7 @@ export default function UsersDashboardPage() {
             right: 0,
             backgroundColor: "#ff9800",
             borderRadius: 0,
+            zIndex: 1300,
           }}
         >
           <Tabs
