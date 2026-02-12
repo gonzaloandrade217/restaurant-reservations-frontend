@@ -36,6 +36,8 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
   const [partySize, setPartySize] = useState(1);
   const [date, setDate] = useState('');
   const [message, setMessage] = useState('');
+  const [time, setTime] = useState('');
+
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -78,6 +80,7 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
 
     const reservationData: CreateReservationDto = {
       date,
+      time,
       partySize,
       userId,
       restaurantId: selectedRestaurantId,
@@ -182,11 +185,27 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
       )}
 
       <TextField
-        label="Fecha y Hora de la Reserva"
-        type="datetime-local"
+        label="Fecha"
+        type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        variant="outlined"
+        fullWidth
+        required
+        InputLabelProps={{ shrink: true, style: { color: 'white' } }}
+        sx={{
+          '& .MuiInputBase-input': { color: 'white' },
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': { borderColor: 'white' },
+            '&:hover fieldset': { borderColor: 'white' },
+            '&.Mui-focused fieldset': { borderColor: 'white' },
+          },
+        }}
+      />
+      <TextField
+        label="Hora"
+        type="time"
+        value={time}
+        onChange={(e) => setTime(e.target.value)}
         fullWidth
         required
         InputLabelProps={{ shrink: true, style: { color: 'white' } }}

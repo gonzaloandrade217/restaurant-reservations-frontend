@@ -13,7 +13,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Badge
+  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
@@ -21,7 +25,7 @@ interface Reservation {
   id: string;
   date: string;
   partySize: number;
-  restaurant: { name: string };
+  restaurant: { id: string; name: string };
   user: { name: string; email: string };
   cancelReason?: string;
   completed?: boolean;
@@ -38,9 +42,20 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
   const [cancelledReservations, setCancelledReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
+  const [adminRestaurantId, setAdminRestaurantId] = useState<string | null>(null);
+
 
   const [localCancelReasons, setLocalCancelReasons] = useState<{ [id: string]: string }>({});
   const [localExceptions, setLocalExceptions] = useState<{ [id: string]: string }>({});
+
+  // ===== MODAL MESAS =====
+  const [openMesaModal, setOpenMesaModal] = useState(false);
+  const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [tablesUsed, setTablesUsed] = useState<number>(1);
+  const [tablesInfoByRestaurant, setTablesInfoByRestaurant] = useState<
+    Record<string, { total: number; used: number; available: number }>  
+  >({});
 
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -65,7 +80,12 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
         fetch(`${BASE}/reservations/admin/cancelled/${adminId}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      setPendingReservations(await pendingRes.json());
+      const pendingData = await pendingRes.json();
+      setPendingReservations(pendingData);
+
+      if (pendingData.length > 0) {
+        setAdminRestaurantId(pendingData[0].restaurant.id);
+      }
       setAcceptedReservations(await acceptedRes.json());
       setCancelledReservations(await cancelledRes.json());
     } catch (err: any) {
@@ -76,11 +96,60 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     }
   };
 
+  const loadTablesInfo = async (restaurantId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+
+    console.log("Fetching tables with:", {
+      restaurantId,
+      searchDate,
+    });
+
+    const calendarDateToQuery = (dateStr: string) => {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0).toISOString();
+    };
+
+    const dateForQuery = calendarDateToQuery(searchDate);
+
+    const res = await fetch(
+      `${BASE}/restaurants/${restaurantId}/tables?date=${dateForQuery}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setTablesInfoByRestaurant(prev => ({
+      ...prev,
+      [restaurantId]: {
+        total: data.totalTables,
+        used: data.tablesUsed,
+        available: data.availableTables,
+      }
+    }));
+  };
+
   useEffect(() => {
     loadReservations();
-  }, [refresh]);
+  }, [refresh, searchDate]);
+  
+  useEffect(() => {
+    const restaurantIds = new Set<string>();
 
-  const handleAction = async (id: string, action: "accept" | "reject") => {
+    pendingReservations.forEach(r => restaurantIds.add(r.restaurant.id));
+    acceptedReservations.forEach(r => restaurantIds.add(r.restaurant.id));
+
+    if (restaurantIds.size === 0) return;
+
+    restaurantIds.forEach(id => {
+      loadTablesInfo(id);
+    });
+  }, [pendingReservations, acceptedReservations, searchDate]);
+
+
+  const handleAction = async (id: string, action: "reject") => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
 
@@ -98,9 +167,65 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     });
 
     if (res.ok) {
-      const updated = pendingReservations.find(r => r.id === id);
-      if (action === "accept" && updated) setAcceptedReservations(prev => [...prev, updated]);
       setPendingReservations(prev => prev.filter(r => r.id !== id));
+    }
+  };
+
+  const handleAcceptClick = (r: Reservation) => {
+    setSelectedReservationId(r.id);
+    setSelectedRestaurantId(r.restaurant.id);
+    setTablesUsed(1);
+    setOpenMesaModal(true);
+  };
+
+  const reloadAllTablesInfo = async () => {
+    const restaurantIds = new Set<string>();
+
+    pendingReservations.forEach(r => restaurantIds.add(r.restaurant.id));
+    acceptedReservations.forEach(r => restaurantIds.add(r.restaurant.id));
+
+    for (const id of restaurantIds) {
+      await loadTablesInfo(id);
+    }
+  };
+
+  const confirmAcceptWithTables = async () => {
+    if (!selectedReservationId) return;
+
+    const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+    const info = tablesInfoByRestaurant[selectedRestaurantId!];
+    if (!info || tablesUsed > info.available) {
+      alert("No hay suficientes mesas disponibles para ese día");
+      return;
+    }
+
+    if (localExceptions[selectedReservationId]) {
+      await fetch(`${BASE}/reservations/${selectedReservationId}/exception`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: localExceptions[selectedReservationId] }),
+      });
+    }
+
+    const res = await fetch(`${BASE}/reservations/${selectedReservationId}/accept`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ tablesUsed }),
+    });
+
+    if (res.ok) {
+      setOpenMesaModal(false);
+      setSelectedReservationId(null);
+
+      await loadReservations();
     }
   };
 
@@ -147,12 +272,13 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
 
   const filterByDate = (reservations: Reservation[]) =>
     reservations.filter(r => {
-      const resDate = new Date(r.date);
-      const localDateStr =
-        resDate.getFullYear() + "-" +
-        String(resDate.getMonth() + 1).padStart(2, "0") + "-" +
-        String(resDate.getDate()).padStart(2, "0");
-      return localDateStr === searchDate;
+      const d = new Date(r.date);
+      const localDateStr  =
+        d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0");
+
+      return localDateStr  === searchDate;
     });
 
   const filteredPending = filterByDate(pendingReservations);
@@ -224,7 +350,7 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
 
         {!isAccepted && (
           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-            <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleAction(r.id, "accept")}>
+            <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleAcceptClick(r)}>
               Aceptar
             </Button>
             <Button variant="contained" sx={{ backgroundColor: "#ff9800" }} onClick={() => handleAction(r.id, "reject")}>
@@ -264,15 +390,61 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <TextField
-          type="date"
-          value={searchDate}
-          onChange={(e) => setSearchDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          sx={{ width: "250px", backgroundColor: "white", borderRadius: 2 }}
-        />
-      </Box>
+      <Grid container spacing={2} alignItems="stretch" sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <TextField
+            type="date"
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              sx={{ backgroundColor: "white", borderRadius: 2 }}
+            />
+        </Grid>
+
+        <Grid item xs={12} md={8}>
+          {Object.entries(tablesInfoByRestaurant).map(([restaurantId, info]) => {
+            const restaurant =
+              pendingReservations.find(r => r.restaurant.id === restaurantId)?.restaurant ||
+              acceptedReservations.find(r => r.restaurant.id === restaurantId)?.restaurant;
+
+            if (!restaurant) return null;
+
+            return (
+              <Card key={restaurantId} sx={{ mb: 2 }}>
+                <CardContent>
+                  <Typography variant="h6">
+                    Mesas del día: {restaurant.name}
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={4}>
+                      <Typography variant="body2">Totales</Typography>
+                      <Typography variant="h6">{info.total}</Typography>
+                    </Grid>
+
+                    <Grid item xs={4}>
+                      <Typography variant="body2">Usadas</Typography>
+                      <Typography variant="h6">{info.used}</Typography>
+                    </Grid>
+
+                    <Grid item xs={4}>
+                      <Typography variant="body2">Disponibles</Typography>
+                      <Typography
+                        variant="h6"
+                        color={info.available <= 0 ? "error" : "primary"}
+                      >
+                        {info.available}
+                </Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            );
+          })}
+      </Grid>
+    </Grid>
+
 
       {/* --- PENDIENTES --- */}
       <Accordion defaultExpanded sx={{ backgroundColor: "#100f0fff", color: "white" }}>
@@ -330,6 +502,34 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
           </Grid>
         </AccordionDetails>
       </Accordion>
+      <Dialog open={openMesaModal} onClose={() => setOpenMesaModal(false)}>
+        <DialogTitle>Asignar mesas</DialogTitle>
+
+        <DialogContent>
+          <TextField
+            type="number"
+            label="Cantidad de mesas a usar"
+            fullWidth
+            inputProps={{ min: 1 }}
+            value={tablesUsed}
+            onChange={(e) => setTablesUsed(Number(e.target.value))}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenMesaModal(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            sx={{ backgroundColor: "#ff9800" }}
+            onClick={confirmAcceptWithTables}
+          >
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
