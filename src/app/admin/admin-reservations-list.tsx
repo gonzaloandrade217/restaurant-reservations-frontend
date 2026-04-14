@@ -107,7 +107,7 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
 
     const calendarDateToQuery = (dateStr: string) => {
       const [y, m, d] = dateStr.split("-").map(Number);
-      return new Date(y, m - 1, d, 12, 0, 0).toISOString();
+      return new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
     };
 
     const dateForQuery = calendarDateToQuery(searchDate);
@@ -272,13 +272,10 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
 
   const filterByDate = (reservations: Reservation[]) =>
     reservations.filter(r => {
-      const d = new Date(r.date);
-      const localDateStr  =
-        d.getFullYear() + "-" +
-        String(d.getMonth() + 1).padStart(2, "0") + "-" +
-        String(d.getDate()).padStart(2, "0");
 
-      return localDateStr  === searchDate;
+      const datePart = r.date.split('T')[0];
+
+      return datePart === searchDate;
     });
 
   const filteredPending = filterByDate(pendingReservations);
@@ -298,7 +295,14 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
         <Typography variant="body2" sx={{ mb: 1 }}>{r.user.email}</Typography>
 
         <Typography variant="subtitle2" color="text.secondary">Fecha:</Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>{new Date(r.date).toLocaleString()}</Typography>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {(() => {
+            const [datePart, timePart] = r.date.split('T');
+            const [year, month, day] = datePart.split('-');
+            const time = timePart.substring(0, 5);
+            return `${day}/${month}/${year} a las ${time} hs`;
+          })()}
+        </Typography>
 
         <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>
@@ -375,7 +379,18 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
         <Typography variant="body2" sx={{ mb: 1 }}>{r.user.email}</Typography>
 
         <Typography variant="subtitle2" color="text.secondary">Fecha:</Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>{new Date(r.date).toLocaleString()}</Typography>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {(() => {
+            const partes = r.date.split('T'); 
+            const fecha = partes[0]; 
+            const horaCompleta = partes[1]; 
+
+            const [anio, mes, dia] = fecha.split('-');
+            const horaMinutos = horaCompleta.substring(0, 5);
+
+            return `${dia}/${mes}/${anio} a las ${horaMinutos} hs`;
+          })()}
+        </Typography>
 
         <Typography variant="subtitle2" color="text.secondary">Personas:</Typography>
         <Typography variant="body2" sx={{ mb: 1 }}>{r.partySize}</Typography>

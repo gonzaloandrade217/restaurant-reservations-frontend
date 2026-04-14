@@ -24,9 +24,10 @@ interface Restaurant {
 
 interface RestaurantListProps {
   refresh?: number;
+  adminId?: string;
 }
 
-export default function RestaurantList({ refresh }: RestaurantListProps) {
+export default function RestaurantList({ refresh, adminId }: RestaurantListProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,10 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
         throw new Error(
           'Necesitás ser ADMIN para ver la lista de restaurantes.'
         );
+
+      const endpoint = adminId 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/restaurants/admin/${adminId}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/restaurants?admin=true`;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/restaurants?admin=true`,
@@ -79,7 +84,7 @@ export default function RestaurantList({ refresh }: RestaurantListProps) {
 
   useEffect(() => {
     fetchRestaurants();
-  }, [refresh]);
+  }, [refresh, adminId]);
 
   const handleDelete = async (id: string) => {
     const confirmDelete = window.confirm(

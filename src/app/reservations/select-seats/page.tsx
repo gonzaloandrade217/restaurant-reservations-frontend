@@ -36,9 +36,9 @@ export default function SelectSeatsPage() {
   }, [restaurantIdFromQuery]);
 
   const toISOStringFromLocalInput = (localValue: string) => {
-    const d = new Date(localValue);
-    if (isNaN(d.getTime())) return null;
-    return d.toISOString();
+    if (!localValue) return null;
+
+    return `${localValue}:00.000Z`;
   };
 
   const handleDateTimeChange = (value: string) => {
@@ -46,18 +46,8 @@ export default function SelectSeatsPage() {
       setDateTime('');
       return;
     }
-    const d = new Date(value);
-    if (isNaN(d.getTime())) {
-      setDateTime(value);
-      return;
-    }
-    d.setMinutes(0, 0, 0);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const localStr = `${yyyy}-${mm}-${dd}T${hh}:00`;
-    setDateTime(localStr);
+    
+    setDateTime(value);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {

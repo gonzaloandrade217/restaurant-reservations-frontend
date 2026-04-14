@@ -325,7 +325,9 @@ export default function AdminDashboardPage() {
 
           <Divider sx={{ my: 3, borderColor: "white" }} />
 
-          <RestaurantList refresh={refreshRestaurants} />
+          <RestaurantList 
+            refresh={refreshRestaurants}
+            adminId={localStorage.getItem("userId") || ""} />
         </Box>
       )}
 

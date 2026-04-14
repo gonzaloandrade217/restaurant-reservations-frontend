@@ -32,6 +32,8 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [mesaTipo, setMesaTipo] = useState<MesaTipoOption | "">(""); 
   const [latitude, setLatitude] = useState<number>(-34.617);
   const [longitude, setLongitude] = useState<number>(-58.368);
+  const [images, setImages] = useState<string[]>([]);
+  const [currentPreview, setCurrentPreview] = useState(0);
   const [message, setMessage] = useState("");
 
   // Geocoding: centra el mapa según ciudad/dirección
@@ -79,6 +81,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           mesaTipo: mesaTipo || undefined,
           latitude,
           longitude,
+          images: images.length > 0 ? images : undefined,
         }),
       });
 
@@ -93,7 +96,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       // Limpiar formulario
       setName(""); setCity(""); setAddress(""); setPhone(""); setDescription("");
       setCapacity(""); setCantidadMesas(""); setMesaCapacidad(""); setMesaTipo("");
-      setLatitude(-34.617); setLongitude(-58.368);
+      setLatitude(-34.617); setLongitude(-58.368); setImages([]); setCurrentPreview(0);
 
       if (onCreated) onCreated();
     } catch (error: any) {
@@ -246,6 +249,97 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           },
         }}
       />
+
+      {/* Fotos del restaurante */}
+      <Box>
+        <Typography sx={{ color: "white", mb: 1, fontSize: "0.9rem" }}>
+          Fotos del restaurante (opcional)
+        </Typography>
+        <Button
+          variant="outlined"
+          component="label"
+          sx={{ color: "white", borderColor: "white" }}
+        >
+          📷 Adjuntar fotos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
+              if (oversized.length > 0) {
+                alert(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`);
+              }
+              const valid = files.filter(f => f.size <= 2 * 1024 * 1024);
+              valid.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  setImages(prev => [...prev, reader.result as string]);
+                };
+                reader.readAsDataURL(file);
+              });
+              e.target.value = "";
+            }}
+          />
+        </Button>
+
+        {/* Carrusel de preview */}
+        {images.length > 0 && (
+          <Box sx={{ mt: 2, position: "relative" }}>
+            <Box
+              component="img"
+              src={images[currentPreview]}
+              alt={`Foto ${currentPreview + 1}`}
+              sx={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 1, border: "1px solid rgba(255,255,255,0.3)", display: "block" }}
+            />
+
+            {/* Navegación */}
+            {images.length > 1 && (
+              <Box display="flex" justifyContent="center" alignItems="center" gap={1} mt={1}>
+                <Button size="small" onClick={() => setCurrentPreview(p => (p - 1 + images.length) % images.length)}
+                  sx={{ color: "white", minWidth: 32, p: 0 }}>◀</Button>
+                <Typography sx={{ color: "white", fontSize: "0.8rem" }}>
+                  {currentPreview + 1} / {images.length}
+                </Typography>
+                <Button size="small" onClick={() => setCurrentPreview(p => (p + 1) % images.length)}
+                  sx={{ color: "white", minWidth: 32, p: 0 }}>▶</Button>
+              </Box>
+            )}
+
+            {/* Thumbnails */}
+            <Box display="flex" gap={1} mt={1} sx={{ overflowX: "auto", pb: 0.5 }}>
+              {images.map((img, i) => (
+                <Box key={i} sx={{ position: "relative", flexShrink: 0 }}>
+                  <Box
+                    component="img"
+                    src={img}
+                    onClick={() => setCurrentPreview(i)}
+                    sx={{
+                      width: 56, height: 56, objectFit: "cover", borderRadius: 1, cursor: "pointer",
+                      border: i === currentPreview ? "2px solid #ff9800" : "2px solid transparent",
+                      opacity: i === currentPreview ? 1 : 0.6,
+                    }}
+                  />
+                  <Box
+                    onClick={() => {
+                      setImages(prev => prev.filter((_, idx) => idx !== i));
+                      setCurrentPreview(p => Math.min(p, images.length - 2));
+                    }}
+                    sx={{
+                      position: "absolute", top: -6, right: -6, width: 18, height: 18,
+                      backgroundColor: "#ff6b6b", borderRadius: "50%", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.65rem", color: "white", fontWeight: "bold", lineHeight: 1,
+                    }}
+                  >✕</Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       {/* Mapa */}
       <Box sx={{ height: 300, width: "100%", borderRadius: 2, overflow: "hidden" }}>

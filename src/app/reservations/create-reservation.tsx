@@ -74,15 +74,14 @@ export default function CreateReservationForm({ onCreated }: CreateReservationFo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage('Creando reserva...');
 
-    const userId = '89fec011-6bf9-4af7-a2a4-50ade15d9238';
+    const fixedDate = `${date}T12:00:00.000Z`;
 
     const reservationData: CreateReservationDto = {
-      date,
+      date: fixedDate,
       time,
       partySize,
-      userId,
+      userId: '89fec011-6bf9-4af7-a2a4-50ade15d9238',
       restaurantId: selectedRestaurantId,
       tableId: selectedTableId,
     };

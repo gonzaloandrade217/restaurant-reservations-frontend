@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from "react";
-import { Box, Card, Typography, Button, IconButton } from "@mui/material";
+import { Box, Card, Typography, Button, IconButton, Tabs, Tab, Pagination } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+
+const PAGE_SIZE = 5;
+type StatusFilter = "ALL" | "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED";
 
 const API =
   "NEXT_PUBLIC_API_URL" in process.env
@@ -18,6 +21,8 @@ export default function ReservationsSection({ onUpdate }: Props) {
   const [hiddenReservations, setHiddenReservations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [page, setPage] = useState(1);
 
   const previousReservationsRef = useRef<any[]>([]);
 
@@ -117,14 +122,16 @@ export default function ReservationsSection({ onUpdate }: Props) {
      HELPERS
      =============================== */
   const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!iso) return "Sin fecha";
+
+    const [datePart, timePart] = iso.split('T');
+  
+    const [year, month, day] = datePart.split('-');
+    const formattedDate = `${day}/${month}/${year}`;
+  
+    const formattedTime = timePart.substring(0, 5);
+  
+    return `${formattedDate} - ${formattedTime} hs`;
   };
 
   const translateStatus = (status: string) => {
@@ -181,11 +188,47 @@ export default function ReservationsSection({ onUpdate }: Props) {
     return <Typography sx={{ color: "white" }}>Cargando reservas...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
 
+  const filtered = reservations.filter(r => {
+    if (hiddenReservations.includes(r.id)) return false;
+    if (statusFilter === "ALL") return true;
+    return r.status === statusFilter;
+  });
+
+  const reversed = [...filtered].reverse();
+  const totalPages = Math.ceil(reversed.length / PAGE_SIZE);
+  const paginated = reversed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const FILTERS: { label: string; value: StatusFilter }[] = [
+    { label: "Todas", value: "ALL" },
+    { label: "Pendientes", value: "PENDING" },
+    { label: "Aceptadas", value: "ACCEPTED" },
+    { label: "Completadas", value: "COMPLETED" },
+    { label: "Canceladas", value: "CANCELLED" },
+  ];
+
   return (
-    <Box display="grid" gap={2}>
-      {reservations
-        .filter(r => !hiddenReservations.includes(r.id))
-        .map(r => (
+    <Box>
+      {/* Tabs de filtro */}
+      <Tabs
+        value={statusFilter}
+        onChange={(_, v) => { setStatusFilter(v); setPage(1); }}
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{
+          mb: 2,
+          "& .MuiTab-root": { color: "rgba(255,255,255,0.6)", minWidth: "auto", fontSize: "0.8rem" },
+          "& .Mui-selected": { color: "white !important" },
+          "& .MuiTabs-indicator": { backgroundColor: "#ff9800" },
+        }}
+      >
+        {FILTERS.map(f => (
+          <Tab key={f.value} label={f.label} value={f.value} />
+        ))}
+      </Tabs>
+
+      {/* Lista de reservas */}
+      <Box display="grid" gap={2}>
+        {paginated.map(r => (
           <Card
             key={r.id}
             sx={{
@@ -212,16 +255,12 @@ export default function ReservationsSection({ onUpdate }: Props) {
             <Typography>Personas: {r.partySize}</Typography>
 
             {r.cancelReason && (
-              <Typography
-                sx={{ mt: 1, fontStyle: "italic", color: "#ff6b6b" }}
-              >
+              <Typography sx={{ mt: 1, fontStyle: "italic", color: "#ff6b6b" }}>
                 Razón de cancelación: {r.cancelReason}
               </Typography>
             )}
 
-            <Typography
-              sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}
-            >
+            <Typography sx={{ mt: 1, fontWeight: "bold", color: statusColor(r.status) }}>
               {translateStatus(r.status)}
             </Typography>
 
@@ -238,10 +277,26 @@ export default function ReservationsSection({ onUpdate }: Props) {
           </Card>
         ))}
 
-      {reservations.length === 0 && (
-        <Typography align="center" sx={{ color: "white", mt: 2 }}>
-          No tenés reservas aún.
-        </Typography>
+        {filtered.length === 0 && (
+          <Typography align="center" sx={{ color: "white", mt: 2 }}>
+            {statusFilter === "ALL" ? "No tenés reservas aún." : `No tenés reservas ${FILTERS.find(f => f.value === statusFilter)?.label.toLowerCase()}.`}
+          </Typography>
+        )}
+      </Box>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, v) => setPage(v)}
+            sx={{
+              "& .MuiPaginationItem-root": { color: "white" },
+              "& .Mui-selected": { backgroundColor: "#ff9800 !important", color: "white" },
+            }}
+          />
+        </Box>
       )}
     </Box>
   );

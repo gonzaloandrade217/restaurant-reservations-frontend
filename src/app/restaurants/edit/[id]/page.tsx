@@ -8,6 +8,7 @@ import {
   Typography,
   Container,
   MenuItem,
+  Box,
 } from "@mui/material";
 
 export default function EditRestaurantPage() {
@@ -15,6 +16,7 @@ export default function EditRestaurantPage() {
   const id = params.id;
   const router = useRouter();
 
+  const [currentPreview, setCurrentPreview] = useState(0);
   const [restaurant, setRestaurant] = useState({
     name: "",
     city: "",
@@ -25,6 +27,7 @@ export default function EditRestaurantPage() {
     cantidadMesas: 0,
     mesaTipo: "",
     mesaCapacidad: 0,
+    images: [] as string[],
   });
 
   // CARGAR DATOS DEL RESTAURANTE
@@ -48,6 +51,7 @@ export default function EditRestaurantPage() {
         cantidadMesas: data.cantidadMesas ?? 0,
         mesaTipo: data.mesaTipo ?? "",
         mesaCapacidad: data.mesaCapacidad ?? 0,
+        images: data.images ?? [],
       });
     };
 
@@ -80,6 +84,7 @@ export default function EditRestaurantPage() {
       mesaCapacidad: restaurant.mesaCapacidad
         ? Number(restaurant.mesaCapacidad)
         : null,
+      images: restaurant.images ?? [],
     };
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants/${id}`, {
@@ -232,6 +237,89 @@ export default function EditRestaurantPage() {
           sx: { "& fieldset": { borderColor: "white" } },
         }}
       />
+
+      {/* FOTOS DEL RESTAURANTE */}
+      <Box sx={{ mb: 3 }}>
+        <Typography sx={{ color: "white", mb: 1, fontSize: "0.9rem" }}>
+          Fotos del restaurante (opcional)
+        </Typography>
+        <Button
+          variant="outlined"
+          component="label"
+          sx={{ color: "white", borderColor: "white" }}
+        >
+          📷 Adjuntar fotos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
+              if (oversized.length > 0) alert(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`);
+              const valid = files.filter(f => f.size <= 2 * 1024 * 1024);
+              valid.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = () =>
+                  setRestaurant(prev => ({ ...prev, images: [...(prev.images || []), reader.result as string] }));
+                reader.readAsDataURL(file);
+              });
+              e.target.value = "";
+            }}
+          />
+        </Button>
+
+        {restaurant.images && restaurant.images.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Box
+              component="img"
+              src={restaurant.images[currentPreview]}
+              alt={`Foto ${currentPreview + 1}`}
+              sx={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 1, border: "1px solid rgba(255,255,255,0.3)", display: "block" }}
+            />
+            {restaurant.images.length > 1 && (
+              <Box display="flex" justifyContent="center" alignItems="center" gap={1} mt={1}>
+                <Button size="small" onClick={() => setCurrentPreview(p => (p - 1 + restaurant.images.length) % restaurant.images.length)}
+                  sx={{ color: "white", minWidth: 32, p: 0 }}>◀</Button>
+                <Typography sx={{ color: "white", fontSize: "0.8rem" }}>
+                  {currentPreview + 1} / {restaurant.images.length}
+                </Typography>
+                <Button size="small" onClick={() => setCurrentPreview(p => (p + 1) % restaurant.images.length)}
+                  sx={{ color: "white", minWidth: 32, p: 0 }}>▶</Button>
+              </Box>
+            )}
+            <Box display="flex" gap={1} mt={1} sx={{ overflowX: "auto", pb: 0.5 }}>
+              {restaurant.images.map((img, i) => (
+                <Box key={i} sx={{ position: "relative", flexShrink: 0 }}>
+                  <Box
+                    component="img"
+                    src={img}
+                    onClick={() => setCurrentPreview(i)}
+                    sx={{
+                      width: 56, height: 56, objectFit: "cover", borderRadius: 1, cursor: "pointer",
+                      border: i === currentPreview ? "2px solid #ff9800" : "2px solid transparent",
+                      opacity: i === currentPreview ? 1 : 0.6,
+                    }}
+                  />
+                  <Box
+                    onClick={() => {
+                      setRestaurant(prev => ({ ...prev, images: prev.images.filter((_, idx) => idx !== i) }));
+                      setCurrentPreview(p => Math.min(p, restaurant.images.length - 2));
+                    }}
+                    sx={{
+                      position: "absolute", top: -6, right: -6, width: 18, height: 18,
+                      backgroundColor: "#ff6b6b", borderRadius: "50%", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.65rem", color: "white", fontWeight: "bold", lineHeight: 1,
+                    }}
+                  >✕</Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       {/* BOTÓN GUARDAR */}
       <Button
