@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Box, Card, CardContent, CardMedia, Typography, Button, Divider,
+  Box, Card, CardContent, Typography, Button, Divider,
   Modal, Rating, List, ListItem, ListItemText, Slider, Switch,
   FormControlLabel, Chip,
 } from "@mui/material";
@@ -28,6 +28,85 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Carrusel tipo Instagram reutilizable
+function ImageCarousel({ imgs, restaurantName }: { imgs: string[]; restaurantName: string }) {
+  const [idx, setIdx] = useState(0);
+
+  if (imgs.length === 0) return (
+    <Box sx={{ height: 220, backgroundColor: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Typography sx={{ color: "rgba(255,255,255,0.25)", fontSize: "0.85rem" }}>Sin fotos</Typography>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ position: "relative", height: 220, backgroundColor: "#000", overflow: "hidden" }}>
+      {/* Imagen principal */}
+      <Box
+        component="img"
+        src={imgs[idx]}
+        alt={`${restaurantName} ${idx + 1}`}
+        sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none" }}
+        onError={(e: any) => { e.target.style.display = "none"; }}
+      />
+
+      {/* Flechas */}
+      {imgs.length > 1 && (
+        <>
+          <Box
+            onClick={(e) => { e.stopPropagation(); setIdx(i => (i - 1 + imgs.length) % imgs.length); }}
+            sx={{
+              position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+              width: 30, height: 30, borderRadius: "50%", backgroundColor: "rgba(0,0,0,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "white", fontSize: "0.85rem", userSelect: "none",
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.85)" },
+            }}
+          >‹</Box>
+          <Box
+            onClick={(e) => { e.stopPropagation(); setIdx(i => (i + 1) % imgs.length); }}
+            sx={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              width: 30, height: 30, borderRadius: "50%", backgroundColor: "rgba(0,0,0,0.6)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "white", fontSize: "0.85rem", userSelect: "none",
+              "&:hover": { backgroundColor: "rgba(0,0,0,0.85)" },
+            }}
+          >›</Box>
+        </>
+      )}
+
+      {/* Dots tipo Instagram */}
+      {imgs.length > 1 && (
+        <Box sx={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", display: "flex", gap: "5px" }}>
+          {imgs.map((_, i) => (
+            <Box
+              key={i}
+              onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+              sx={{
+                width: i === idx ? 8 : 6, height: i === idx ? 8 : 6,
+                borderRadius: "50%", cursor: "pointer",
+                backgroundColor: i === idx ? "white" : "rgba(255,255,255,0.45)",
+                transition: "all 0.2s",
+              }}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* Contador top-right */}
+      {imgs.length > 1 && (
+        <Box sx={{
+          position: "absolute", top: 8, right: 8,
+          backgroundColor: "rgba(0,0,0,0.55)", color: "white",
+          fontSize: "0.72rem", px: 1, py: 0.3, borderRadius: 10,
+        }}>
+          {idx + 1}/{imgs.length}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 export default function RestaurantsSection({ search = "" }: Props) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +114,6 @@ export default function RestaurantsSection({ search = "" }: Props) {
   const [reviewFormRestaurantId, setReviewFormRestaurantId] = useState<string | null>(null);
   const [reviewsMap, setReviewsMap] = useState<Record<string, Review[]>>({});
   const [openReviewsModal, setOpenReviewsModal] = useState<Restaurant | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState<Record<string, number>>({});
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [nearbyOnly, setNearbyOnly] = useState(false);
@@ -143,37 +221,10 @@ export default function RestaurantsSection({ search = "" }: Props) {
           const dist = (restaurant as any).distanceKm;
 
           return (
-            <Card key={restaurant.id} sx={{ backgroundColor: "#111", color: "white", border: "1px solid white" }}>
-              {(() => {
-                const imgs = restaurant.images || [];
-                const idx = carouselIndex[restaurant.id] || 0;
-                if (imgs.length === 0) return (
-                  <Box sx={{ height: 180, backgroundColor: "#222", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Typography sx={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>Sin imagen</Typography>
-                  </Box>
-                );
-                return (
-                  <Box sx={{ position: "relative", height: 180 }}>
-                    <Box component="img" src={imgs[idx]} alt={`${restaurant.name} ${idx + 1}`}
-                      sx={{ width: "100%", height: 180, objectFit: "cover", display: "block" }}
-                      onError={(e: any) => { e.target.style.display = "none"; }} />
-                    {imgs.length > 1 && (
-                      <>
-                        <Box onClick={(e) => { e.stopPropagation(); setCarouselIndex(p => ({ ...p, [restaurant.id]: (idx - 1 + imgs.length) % imgs.length })); }}
-                          sx={{ position: "absolute", left: 6, top: "50%", transform: "translateY(-50%)", backgroundColor: "rgba(0,0,0,0.55)", color: "white", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", userSelect: "none" }}>◀</Box>
-                        <Box onClick={(e) => { e.stopPropagation(); setCarouselIndex(p => ({ ...p, [restaurant.id]: (idx + 1) % imgs.length })); }}
-                          sx={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", backgroundColor: "rgba(0,0,0,0.55)", color: "white", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "0.9rem", userSelect: "none" }}>▶</Box>
-                        <Box sx={{ position: "absolute", bottom: 6, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 0.5 }}>
-                          {imgs.map((_, i) => (
-                            <Box key={i} onClick={(e) => { e.stopPropagation(); setCarouselIndex(p => ({ ...p, [restaurant.id]: i })); }}
-                              sx={{ width: i === idx ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: i === idx ? "#ff9800" : "rgba(255,255,255,0.6)", cursor: "pointer", transition: "width 0.2s" }} />
-                          ))}
-                        </Box>
-                      </>
-                    )}
-                  </Box>
-                );
-              })()}
+            <Card key={restaurant.id} sx={{ backgroundColor: "#111", color: "white", border: "1px solid white", overflow: "hidden" }}>
+
+              {/* Carrusel de fotos */}
+              <ImageCarousel imgs={restaurant.images ?? []} restaurantName={restaurant.name} />
 
               <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -187,7 +238,8 @@ export default function RestaurantsSection({ search = "" }: Props) {
                 {restaurant.city && <Typography sx={{ mt: 1, opacity: 0.7 }}>Ciudad: {restaurant.city}</Typography>}
                 {restaurant.address && <Typography sx={{ mt: 0.5, opacity: 0.7 }}>Dirección: {restaurant.address}</Typography>}
 
-                <Button variant="contained" sx={{ mt: 2, backgroundColor: "#ff9800" }} fullWidth onClick={() => router.push(`/reservations/select-seats?restaurant=${restaurant.id}`)}>
+                <Button variant="contained" sx={{ mt: 2, backgroundColor: "#ff9800" }} fullWidth
+                  onClick={() => router.push(`/reservations/select-seats?restaurant=${restaurant.id}`)}>
                   Reservar mesa
                 </Button>
                 <Button variant="outlined" sx={{ mt: 1, color: "white", borderColor: "white" }} fullWidth
