@@ -9,6 +9,7 @@ import {
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { useRouter } from "next/navigation";
 import RestaurantReviewForm from "@/app/restaurants/restaurant-review-form";
+import { parseImage } from "@/app/restaurants/create-restaurant";
 
 const API = "NEXT_PUBLIC_API_URL" in process.env ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000";
 
@@ -31,21 +32,24 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 // Carrusel tipo Instagram reutilizable
 function ImageCarousel({ imgs, restaurantName }: { imgs: string[]; restaurantName: string }) {
   const [idx, setIdx] = useState(0);
+  const parsed = imgs.map(s => parseImage(s));
 
-  if (imgs.length === 0) return (
+  if (parsed.length === 0) return (
     <Box sx={{ height: 220, backgroundColor: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Typography sx={{ color: "rgba(255,255,255,0.25)", fontSize: "0.85rem" }}>Sin fotos</Typography>
     </Box>
   );
+
+  const current = parsed[idx];
 
   return (
     <Box sx={{ position: "relative", height: 220, backgroundColor: "#000", overflow: "hidden" }}>
       {/* Imagen principal */}
       <Box
         component="img"
-        src={imgs[idx]}
+        src={current.url}
         alt={`${restaurantName} ${idx + 1}`}
-        sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block", userSelect: "none" }}
+        sx={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${current.x}% ${current.y}%`, display: "block", userSelect: "none" }}
         onError={(e: any) => { e.target.style.display = "none"; }}
       />
 
