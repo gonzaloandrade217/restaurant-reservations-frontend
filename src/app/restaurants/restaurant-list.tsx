@@ -61,10 +61,12 @@ export default function RestaurantList({ refresh, adminId }: RestaurantListProps
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
       const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
       if (!token) throw new Error('No se encontró token. Iniciá sesión como ADMIN.');
       if (role !== 'ADMIN') throw new Error('Necesitás ser ADMIN para ver la lista de restaurantes.');
+      if (!userId) throw new Error('No se encontró el ID de usuario.');
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants?admin=true`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/restaurants/admin/${userId}`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error(`Error al cargar restaurantes (${response.status})`);
