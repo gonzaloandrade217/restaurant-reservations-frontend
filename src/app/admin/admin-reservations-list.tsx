@@ -22,6 +22,7 @@ interface Reservation {
   restaurant: { id: string; name: string };
   user: { name: string; email: string };
   cancelReason?: string;
+  exceptionDescription?: string;
   completed?: boolean;
 }
 
@@ -128,7 +129,7 @@ function ReservationCard({ r, isAccepted, onAccept, onReject, onCancel, onComple
         {/* Pendiente: excepción + botones aceptar/rechazar */}
         {!isAccepted && (
           <>
-            <TextField label="Excepción (opcional)" placeholder="Ej: mesa extra para más clientes"
+            <TextField label="Nota (opcional)" placeholder="Ej: mesa extra para más clientes"
               size="small" fullWidth sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { color: "white", "& fieldset": { borderColor: "rgba(255,255,255,0.2)" } }, "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" } }}
               value={exception || ""} onChange={(e) => onExceptionChange?.(e.target.value)} />
             <Box display="flex" gap={1}>
@@ -147,6 +148,12 @@ function ReservationCard({ r, isAccepted, onAccept, onReject, onCancel, onComple
         {/* Aceptada: cancelar + completada/incumplida */}
         {isAccepted && (
           <>
+            {r.exceptionDescription && (
+              <Box sx={{ backgroundColor: "rgba(255,152,0,0.08)", border: "1px solid rgba(255,152,0,0.25)", borderRadius: 1.5, p: 1.2, mb: 1.5 }}>
+                <Typography sx={{ color: "rgba(255,255,255,0.45)", fontSize: "0.7rem", mb: 0.3 }}>📋 Nota interna</Typography>
+                <Typography sx={{ color: "#ff9800", fontSize: "0.85rem" }}>{r.exceptionDescription}</Typography>
+              </Box>
+            )}
             <TextField label="Razón de cancelación" placeholder="Motivo..." size="small" fullWidth
               sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { color: "white", "& fieldset": { borderColor: "rgba(255,255,255,0.2)" } }, "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" } }}
               value={cancelReason || ""} onChange={(e) => onCancelReasonChange?.(e.target.value)} />
@@ -320,26 +327,22 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     if (res.ok) { setOpenMesaModal(false); setSelectedReservationId(null); await loadReservations(); }
   };
 
-  const handleCancel = async (id: string, restaurantId: string) => {
+  const handleCancel = async (id: string) => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const reason = localCancelReasons[id];
     if (!reason?.trim()) { alert("Debes ingresar una razón para cancelar la reserva"); return; }
     const res = await fetch(`${BASE}/reservations/${id}/cancel`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason }) });
-    if (res.ok) {
-      await loadReservations();
-      await loadTablesInfo(restaurantId);
-    }
+    if (res.ok) loadReservations();
   };
 
-  const handleCompleted = async (id: string, completed: boolean, restaurantId: string) => {
+  const handleCompleted = async (id: string, completed: boolean) => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const res = await fetch(`${BASE}/reservations/${id}/completed`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ completed }) });
     if (res.ok) {
       if (completed && onComplete) { const r = acceptedReservations.find(r => r.id === id); if (r) onComplete(r); }
-      await loadReservations();
-      await loadTablesInfo(restaurantId);
+      loadReservations();
     }
   };
 
@@ -442,8 +445,8 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
             emptyMsg="No hay reservas aceptadas para esta fecha."
             renderItem={(r) => (
               <ReservationCard key={r.id} r={r} isAccepted={true}
-                onCancel={() => handleCancel(r.id, r.restaurant.id)}
-                onComplete={(done) => handleCompleted(r.id, done, r.restaurant.id)}
+                onCancel={() => handleCancel(r.id)}
+                onComplete={(done) => handleCompleted(r.id, done)}
                 cancelReason={localCancelReasons[r.id]}
                 onCancelReasonChange={(v) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: v }))}
               />
