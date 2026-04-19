@@ -320,22 +320,26 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     if (res.ok) { setOpenMesaModal(false); setSelectedReservationId(null); await loadReservations(); }
   };
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = async (id: string, restaurantId: string) => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const reason = localCancelReasons[id];
     if (!reason?.trim()) { alert("Debes ingresar una razón para cancelar la reserva"); return; }
     const res = await fetch(`${BASE}/reservations/${id}/cancel`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason }) });
-    if (res.ok) loadReservations();
+    if (res.ok) {
+      await loadReservations();
+      await loadTablesInfo(restaurantId);
+    }
   };
 
-  const handleCompleted = async (id: string, completed: boolean) => {
+  const handleCompleted = async (id: string, completed: boolean, restaurantId: string) => {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const res = await fetch(`${BASE}/reservations/${id}/completed`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ completed }) });
     if (res.ok) {
       if (completed && onComplete) { const r = acceptedReservations.find(r => r.id === id); if (r) onComplete(r); }
-      loadReservations();
+      await loadReservations();
+      await loadTablesInfo(restaurantId);
     }
   };
 
@@ -438,8 +442,8 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
             emptyMsg="No hay reservas aceptadas para esta fecha."
             renderItem={(r) => (
               <ReservationCard key={r.id} r={r} isAccepted={true}
-                onCancel={() => handleCancel(r.id)}
-                onComplete={(done) => handleCompleted(r.id, done)}
+                onCancel={() => handleCancel(r.id, r.restaurant.id)}
+                onComplete={(done) => handleCompleted(r.id, done, r.restaurant.id)}
                 cancelReason={localCancelReasons[r.id]}
                 onCancelReasonChange={(v) => setLocalCancelReasons(prev => ({ ...prev, [r.id]: v }))}
               />
