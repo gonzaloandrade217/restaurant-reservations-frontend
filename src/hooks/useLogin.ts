@@ -8,11 +8,7 @@ export const useLoginHandler = () => {
   const router = useRouter();
 
   const handleLogin = (access_token: string, userRole: Role, userId: string) => {
-    localStorage.setItem("authToken", access_token);
-    localStorage.setItem("userRole", userRole);
-    localStorage.setItem("userId", userId);
-
-    login(access_token, userRole);
+    login(access_token, userRole, userId);
 
     if (userRole === "ADMIN") router.push("/admin/dashboard");
     else router.push("/users/pages");

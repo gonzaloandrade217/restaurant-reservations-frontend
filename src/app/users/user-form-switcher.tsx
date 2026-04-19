@@ -47,7 +47,7 @@ export default function UserFormSwitcher() {
     window.dispatchEvent(new Event("authTokenUpdated"));
 
     // Actualizar contexto
-    login(access_token, userRole);
+    login(access_token, userRole, userId);
 
     // Redirecciones
     if (userRole === "ADMIN") router.push("/admin/dashboard");
