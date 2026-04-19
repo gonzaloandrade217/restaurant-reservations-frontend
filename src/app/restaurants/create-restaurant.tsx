@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { Box, TextField, Button, Typography, MenuItem } from "@mui/material";
+import { Box, TextField, Button, Typography, MenuItem, Snackbar, Alert } from "@mui/material";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -124,7 +124,8 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
   const [longitude, setLongitude] = useState<number>(-58.368);
   const [images, setImages] = useState<ImgData[]>([]);
   const [currentPreview, setCurrentPreview] = useState(0);
-  const [message, setMessage] = useState("");
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success'|'error' }>({ open: false, msg: '', severity: 'success' });
+  const showSnack = (msg: string, severity: 'success'|'error' = 'success') => setSnack({ open: true, msg, severity });
 
   useEffect(() => {
     async function geocode() {
@@ -140,7 +141,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("Creando restaurante...");
+
     try {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No se encontró el token.");
@@ -158,12 +159,12 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
       });
       if (!response.ok) { const e = await response.json(); throw new Error(e.message || "Error al crear el restaurante"); }
       const data = await response.json();
-      setMessage(`Restaurante creado con éxito: ${data.name}`);
+      showSnack(`Restaurante creado con éxito: ${data.name}`);
       setName(""); setCity(""); setAddress(""); setPhone(""); setDescription("");
       setCapacity(""); setCantidadMesas(""); setMesaCapacidad(""); setMesaTipo("");
       setLatitude(-34.617); setLongitude(-58.368); setImages([]); setCurrentPreview(0);
       if (onCreated) onCreated();
-    } catch (error: any) { setMessage(`Error: ${error.message}`); }
+    } catch (error: any) { showSnack(error.message, 'error'); }
   };
 
   function DraggableMarker() {
@@ -238,7 +239,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
           <input type="file" accept="image/*" multiple hidden onChange={(e) => {
             const files = Array.from(e.target.files || []);
             const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-            if (oversized.length > 0) alert(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`);
+            if (oversized.length > 0) showSnack(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`, 'error');
             files.filter(f => f.size <= 2 * 1024 * 1024).forEach(file => {
               const reader = new FileReader();
               reader.onload = () => setImages(prev => [...prev, { url: reader.result as string, x: 50, y: 50 }]);
@@ -270,7 +271,9 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
         fontSize: { xs: "0.95rem", sm: "1rem" }, borderRadius: 2, "&:hover": { backgroundColor: "#e86f00" },
       }}>Registrar</Button>
 
-      {message && <Typography align="center" sx={{ color: "white" }}>{message}</Typography>}
+      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from "react";
-import { Box, Card, Typography, Button, IconButton, Tabs, Tab, Pagination } from "@mui/material";
+import { Box, Card, Typography, Button, IconButton, Tabs, Tab, Pagination, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
 const PAGE_SIZE = 5;
@@ -25,6 +25,9 @@ export default function ReservationsSection({ onUpdate }: Props) {
   const [page, setPage] = useState(1);
 
   const previousReservationsRef = useRef<any[]>([]);
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success'|'error' }>({ open: false, msg: '', severity: 'success' });
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; reservationId: string }>({ open: false, reservationId: '' });
+  const showSnack = (msg: string, severity: 'success'|'error' = 'success') => setSnack({ open: true, msg, severity });
 
   /* ===============================
      OCULTAR RESERVA (PERSISTENTE)
@@ -47,7 +50,7 @@ export default function ReservationsSection({ onUpdate }: Props) {
 
       setHiddenReservations(prev => [...prev, id]);
     } catch (err: any) {
-      alert(err.message);
+      showSnack(err.message, 'error');
     }
   };
 
@@ -154,7 +157,6 @@ export default function ReservationsSection({ onUpdate }: Props) {
      CANCELAR RESERVA
      =============================== */
   const cancelReservation = async (reservationId: string) => {
-    if (!confirm("¿Cancelar reserva?")) return;
 
     try {
       const token = localStorage.getItem("authToken");
@@ -170,14 +172,14 @@ export default function ReservationsSection({ onUpdate }: Props) {
 
       if (!res.ok) throw new Error("Error al cancelar reserva");
 
-      alert("Reserva cancelada.");
+      showSnack("Reserva cancelada.");
       setReservations(prev =>
         prev.map(r =>
           r.id === reservationId ? { ...r, status: "CANCELLED" } : r
         )
       );
     } catch (err: any) {
-      alert(err.message);
+      showSnack(err.message, 'error');
     }
   };
 
@@ -269,7 +271,7 @@ export default function ReservationsSection({ onUpdate }: Props) {
                 variant="contained"
                 sx={{ mt: 2, backgroundColor: "#ff9800" }}
                 fullWidth
-                onClick={() => cancelReservation(r.id)}
+                onClick={() => setConfirmDialog({ open: true, reservationId: r.id })}
               >
                 Cancelar reserva
               </Button>
@@ -298,6 +300,24 @@ export default function ReservationsSection({ onUpdate }: Props) {
           />
         </Box>
       )}
+      <Dialog open={confirmDialog.open} onClose={() => setConfirmDialog({ open: false, reservationId: '' })}
+        PaperProps={{ sx: { backgroundColor: '#1a1a1a', color: 'white', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>¿Cancelar reserva?</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>Esta acción no se puede deshacer.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setConfirmDialog({ open: false, reservationId: '' })} sx={{ color: 'rgba(255,255,255,0.5)' }}>Volver</Button>
+          <Button variant="contained" sx={{ backgroundColor: '#ff9800', '&:hover': { backgroundColor: '#e86f00' }, fontWeight: 700 }}
+            onClick={() => { cancelReservation(confirmDialog.reservationId); setConfirmDialog({ open: false, reservationId: '' }); }}>
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+      </Snackbar>
     </Box>
   );
 }

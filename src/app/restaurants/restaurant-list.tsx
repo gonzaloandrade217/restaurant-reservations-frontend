@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Container, Typography, Card, CardContent, Grid, Button, Box } from '@mui/material';
+import { Container, Typography, Card, CardContent, Grid, Button, Box, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { parseImage } from './create-restaurant';
 
 interface Restaurant {
@@ -52,6 +52,9 @@ function AdminCarousel({ imgs }: { imgs: string[] }) {
 
 export default function RestaurantList({ refresh, adminId }: RestaurantListProps) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success'|'error' }>({ open: false, msg: '', severity: 'success' });
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const showSnack = (msg: string, severity: 'success'|'error' = 'success') => setSnack({ open: true, msg, severity });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -81,7 +84,6 @@ export default function RestaurantList({ refresh, adminId }: RestaurantListProps
   useEffect(() => { fetchRestaurants(); }, [refresh, adminId]);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Seguro que querés eliminar este restaurante?')) return;
     try {
       const token = localStorage.getItem('authToken');
       if (!token) throw new Error('No hay token');
@@ -90,7 +92,9 @@ export default function RestaurantList({ refresh, adminId }: RestaurantListProps
       });
       if (!res.ok) throw new Error('Error eliminando restaurante');
       setRestaurants(prev => prev.filter(r => r.id !== id));
-    } catch (err: any) { alert(err.message); }
+      showSnack('Restaurante eliminado correctamente.');
+    } catch (err: any) { showSnack(err.message, 'error'); }
+    finally { setConfirmId(null); }
   };
 
   if (loading) return <Typography>Cargando restaurantes...</Typography>;
@@ -145,6 +149,23 @@ export default function RestaurantList({ refresh, adminId }: RestaurantListProps
           </Grid>
         ))}
       </Grid>
+      <Dialog open={!!confirmId} onClose={() => setConfirmId(null)}
+        PaperProps={{ sx: { backgroundColor: '#1a1a1a', color: 'white', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>¿Eliminar restaurante?</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>Esta acción no se puede deshacer.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setConfirmId(null)} sx={{ color: 'rgba(255,255,255,0.5)' }}>Cancelar</Button>
+          <Button variant="contained" color="error" sx={{ fontWeight: 700 }} onClick={() => confirmId && handleDelete(confirmId)}>
+            Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+      </Snackbar>
     </Container>
   );
 }

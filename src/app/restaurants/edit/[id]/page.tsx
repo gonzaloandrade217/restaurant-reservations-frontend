@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { TextField, Button, Typography, Container, MenuItem, Box } from "@mui/material";
+import { TextField, Button, Typography, Container, MenuItem, Box, Snackbar, Alert } from "@mui/material";
 import { parseImage, encodeImage } from "@/app/restaurants/create-restaurant";
 
 interface ImgData { url: string; x: number; y: number; }
@@ -83,6 +83,8 @@ export default function EditRestaurantPage() {
   const router = useRouter();
 
   const [currentPreview, setCurrentPreview] = useState(0);
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success'|'error' }>({ open: false, msg: '', severity: 'success' });
+  const showSnack = (msg: string, severity: 'success'|'error' = 'success') => setSnack({ open: true, msg, severity });
   const [restaurant, setRestaurant] = useState({
     name: "", city: "", address: "", phone: "", description: "",
     capacity: 0, cantidadMesas: 0, mesaTipo: "", mesaCapacidad: 0,
@@ -115,7 +117,7 @@ export default function EditRestaurantPage() {
   const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const oversized = files.filter(f => f.size > 2 * 1024 * 1024);
-    if (oversized.length > 0) alert(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`);
+    if (oversized.length > 0) showSnack(`${oversized.length} imagen(es) superan los 2 MB y no se agregarán.`, 'error');
     files.filter(f => f.size <= 2 * 1024 * 1024).forEach(file => {
       const reader = new FileReader();
       reader.onload = () => setRestaurant(prev => ({ ...prev, images: [...prev.images, { url: reader.result as string, x: 50, y: 50 }] }));
@@ -139,8 +141,8 @@ export default function EditRestaurantPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) { alert("Error al actualizar el restaurante ❌"); return; }
-    alert("Restaurante actualizado correctamente ✔️");
+    if (!res.ok) { showSnack("Error al actualizar el restaurante.", 'error'); return; }
+    showSnack("Restaurante actualizado correctamente.");
     router.push("/admin/dashboard");
   };
 
@@ -199,6 +201,9 @@ export default function EditRestaurantPage() {
         sx={{ bgcolor: "#ff9800", fontWeight: "bold", ":hover": { bgcolor: "#e86f00" } }}>
         Volver
       </Button>
+      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+      </Snackbar>
     </Container>
   );
 }

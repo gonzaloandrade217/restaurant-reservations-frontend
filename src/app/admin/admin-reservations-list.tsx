@@ -5,7 +5,7 @@ import {
   Box, Typography, Card, CardContent, Button, Container,
   TextField, Accordion, AccordionSummary, AccordionDetails,
   Badge, Dialog, DialogTitle, DialogContent, DialogActions,
-  Pagination, Chip, LinearProgress, Divider,
+  Pagination, Chip, LinearProgress, Divider, Snackbar, Alert,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -129,7 +129,7 @@ function ReservationCard({ r, isAccepted, onAccept, onReject, onCancel, onComple
         {/* Pendiente: excepción + botones aceptar/rechazar */}
         {!isAccepted && (
           <>
-            <TextField label="Nota (opcional)" placeholder="Ej: mesa extra para más clientes"
+            <TextField label="Excepción (opcional)" placeholder="Ej: mesa extra para más clientes"
               size="small" fullWidth sx={{ mb: 1.5, "& .MuiOutlinedInput-root": { color: "white", "& fieldset": { borderColor: "rgba(255,255,255,0.2)" } }, "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.5)" } }}
               value={exception || ""} onChange={(e) => onExceptionChange?.(e.target.value)} />
             <Box display="flex" gap={1}>
@@ -257,6 +257,8 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
   const [tablesUsed, setTablesUsed] = useState(1);
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success'|'error'|'warning' }>({ open: false, msg: '', severity: 'success' });
+  const showSnack = (msg: string, severity: 'success'|'error'|'warning' = 'success') => setSnack({ open: true, msg, severity });
   const [tablesInfoByRestaurant, setTablesInfoByRestaurant] = useState<Record<string, { total: number; used: number; available: number }>>({});
 
   const today = new Date();
@@ -319,7 +321,7 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const info = tablesInfoByRestaurant[selectedRestaurantId!];
-    if (!info || tablesUsed > info.available) { alert("No hay suficientes mesas disponibles para ese día"); return; }
+    if (!info || tablesUsed > info.available) { showSnack("No hay suficientes mesas disponibles para ese día.", "warning"); return; }
     if (localExceptions[selectedReservationId]) {
       await fetch(`${BASE}/reservations/${selectedReservationId}/exception`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ message: localExceptions[selectedReservationId] }) });
     }
@@ -331,7 +333,7 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
     const token = localStorage.getItem("authToken");
     if (!token) return;
     const reason = localCancelReasons[id];
-    if (!reason?.trim()) { alert("Debes ingresar una razón para cancelar la reserva"); return; }
+    if (!reason?.trim()) { showSnack("Debes ingresar una razón para cancelar la reserva.", "warning"); return; }
     const res = await fetch(`${BASE}/reservations/${id}/cancel`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason }) });
     if (res.ok) loadReservations();
   };
@@ -502,6 +504,9 @@ export default function AdminReservationsList({ refresh, onComplete }: AdminRese
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.msg}</Alert>
+      </Snackbar>
     </Container>
   );
 }
