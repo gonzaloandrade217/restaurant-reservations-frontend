@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Container, Typography, Box, Button, TextField,
-  InputAdornment, Rating, Chip, Divider, CircularProgress,
+  InputAdornment, Rating, Chip, Divider, CircularProgress, Avatar,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -21,6 +21,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  avatar?: string | null;
   adminRating?: number | null;
   reservations?: Reservation[];
 }
@@ -55,15 +56,10 @@ function UserRow({ user, onRatingChange }: { user: User; onRatingChange: (id: st
       '&:hover': { backgroundColor: 'rgba(255,255,255,0.03)' },
       flexWrap: { xs: 'wrap', md: 'nowrap' },
     }}>
-      {/* Avatar inicial */}
-      <Box sx={{
-        width: 40, height: 40, borderRadius: '50%', backgroundColor: '#ff9800',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>
-          {user.name.charAt(0).toUpperCase()}
-        </Typography>
-      </Box>
+      <Avatar src={user.avatar || undefined}
+        sx={{ width: 40, height: 40, backgroundColor: '#ff9800', fontWeight: 700, fontSize: '1rem', flexShrink: 0 }}>
+        {!user.avatar && user.name.charAt(0).toUpperCase()}
+      </Avatar>
 
       {/* Nombre y email */}
       <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>

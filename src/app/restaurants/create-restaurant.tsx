@@ -2,18 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Box, TextField, Button, Typography, MenuItem, Snackbar, Alert } from "@mui/material";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import dynamic from "next/dynamic";
+
+const RestaurantMapPicker = dynamic(() => import("./RestaurantMapPicker"), { ssr: false });
+
+
 
 interface CreateRestaurantFormProps { onCreated?: () => void; }
 type MesaTipoOption = "CUADRADA" | "RECTANGULAR" | "REDONDA";
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
 
 // Codificar/decodificar imagen con posición
 export function encodeImage(url: string, x: number, y: number) {
@@ -167,14 +163,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
     } catch (error: any) { showSnack(error.message, 'error'); }
   };
 
-  function DraggableMarker() {
-    const map = useMap();
-    useEffect(() => { map.setView([latitude, longitude], 13); }, [latitude, longitude]);
-    return (
-      <Marker position={[latitude, longitude]} draggable
-        eventHandlers={{ dragend: (e) => { const p = e.target.getLatLng(); setLatitude(p.lat); setLongitude(p.lng); } }} />
-    );
-  }
+
 
   const handleNumberChange = (value: string, setter: (val: number | "") => void) => {
     setter(value === "" ? "" : Number(value));
@@ -260,10 +249,7 @@ export default function CreateRestaurantForm({ onCreated }: CreateRestaurantForm
 
       {/* Mapa */}
       <Box sx={{ height: 300, width: "100%", borderRadius: 2, overflow: "hidden" }}>
-        <MapContainer center={[latitude, longitude]} zoom={13} style={{ height: "100%", width: "100%" }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <DraggableMarker />
-        </MapContainer>
+        <RestaurantMapPicker latitude={latitude} longitude={longitude} onDrag={(lat, lng) => { setLatitude(lat); setLongitude(lng); }} />
       </Box>
 
       <Button type="submit" fullWidth sx={{

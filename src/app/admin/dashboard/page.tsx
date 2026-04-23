@@ -229,7 +229,7 @@ export default function AdminDashboardPage() {
                           right: -4,
                           width: 12,
                           height: 12,
-                          bgcolor: "purple",
+                          bgcolor: "white",
                           borderRadius: "50%",
                         }}
                       />

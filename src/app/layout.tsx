@@ -8,8 +8,9 @@ import { AuthProvider } from "../context/AuthContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Reserva Restaurante",
-  description: "App para reservas de restaurantes",
+  title: "MesaSegura",
+  description: "Reservá tu mesa en los mejores restaurantes",
+
 };
 
 export default function RootLayout({
@@ -20,6 +21,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Script de Google Identity Services */}
         <Script
           src="https://accounts.google.com/gsi/client"
